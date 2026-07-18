@@ -1,7 +1,7 @@
 {
-  "name": "EF COMMAND Ultimate",
+  "name": "EF COMMAND Ultimate V4",
   "short_name": "EF COMMAND",
-  "description": "Dein vollständiges Lern-Kommandozentrum für die EF.",
+  "description": "Offline-first Schul-Betriebssystem für die EF.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -11,7 +11,7 @@
   <meta name="description" content="Dein vollständiges Lern-Kommandozentrum für die EF." />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-  <title>EF COMMAND Ultimate</title>
+  <title>EF COMMAND Ultimate V4</title>
   <style>
     :root{
       --bg:#050a14;--bg2:#091120;--panel:rgba(12,22,40,.82);--panel2:#101c30;
@@ -221,8 +221,11 @@
     .onboarding{display:flex;z-index:200}.onboarding:not(.show){display:none}.onboarding-card{width:min(760px,100%);background:#091426;border:1px solid var(--border);border-radius:28px;padding:25px;box-shadow:var(--shadow)}
     .onboarding-steps{display:flex;gap:7px;margin-bottom:20px}.onboarding-steps span{height:6px;flex:1;border-radius:99px;background:#1a2940}.onboarding-steps span.active{background:linear-gradient(90deg,var(--accent),var(--accent2))}
     .preset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.preset{border:1px solid var(--border);background:rgba(148,163,184,.05);border-radius:16px;padding:14px;cursor:pointer}.preset.selected{border-color:var(--accent);background:rgba(91,140,255,.12)}
+
+    .timetable-wrap{overflow:auto;border-radius:18px}.timetable-table{width:100%;min-width:900px;border-collapse:separate;border-spacing:7px}.timetable-table th{color:var(--muted);font-size:12px;padding:8px}.timetable-table td{vertical-align:top}.period-label{width:82px;color:var(--muted);font-size:11px;text-align:center}.lesson-cell{min-height:76px;border:1px solid var(--border);border-radius:14px;background:rgba(10,19,34,.68);padding:9px;transition:.2s;cursor:pointer}.lesson-cell:hover{border-color:rgba(91,140,255,.42);transform:translateY(-1px)}.lesson-cell.empty-cell{display:grid;place-items:center;color:var(--faint);border-style:dashed}.lesson-name{font-weight:800}.lesson-meta{font-size:11px;color:var(--muted);margin-top:5px}.week-plan-grid{display:grid;grid-template-columns:repeat(7,minmax(150px,1fr));gap:10px;overflow:auto;padding-bottom:5px}.week-column{border:1px solid var(--border);border-radius:17px;background:rgba(10,19,34,.58);padding:10px;min-height:230px}.week-column.today{border-color:rgba(91,140,255,.52);box-shadow:inset 0 0 0 1px rgba(91,140,255,.17)}.week-column h3{font-size:13px;margin:2px 0 10px}.plan-block{border-left:3px solid var(--accent);background:rgba(91,140,255,.09);border-radius:10px;padding:9px;margin-bottom:8px;font-size:12px}.plan-block.done{opacity:.55;text-decoration:line-through}.plan-time{color:#9db9ff;font-weight:800;margin-bottom:3px}.absence-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.error-card{border-left:4px solid var(--red)}.error-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.compare-box{border:1px solid var(--border);border-radius:14px;padding:12px;background:rgba(148,163,184,.045)}.compare-box.wrong{border-color:rgba(251,113,133,.24)}.compare-box.correct{border-color:rgba(52,211,153,.24)}.review-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:13px}.review-actions button{border:1px solid var(--border);background:rgba(148,163,184,.06);color:white;border-radius:13px;padding:10px 7px}.review-actions button:hover{background:rgba(91,140,255,.15)}.backup-list{display:grid;gap:8px;margin-top:12px}.backup-row{display:flex;gap:10px;align-items:center;border:1px solid var(--border);border-radius:14px;padding:10px}.backup-row .row-main{flex:1}.status-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}.status-pill::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px rgba(52,211,153,.6)}
     @media(max-width:1050px){.subject-grid{grid-template-columns:repeat(2,1fr)}.quick-guides{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:820px){
+      .absence-summary{grid-template-columns:repeat(2,1fr)}.error-grid{grid-template-columns:1fr}.review-actions{grid-template-columns:repeat(2,1fr)}
       .sidebar{display:none}.mobile-top{display:flex}main{padding:calc(78px + env(safe-area-inset-top)) 14px calc(100px + env(safe-area-inset-bottom))}
       .command-bar{display:none}.bottom-nav{
         display:flex;position:fixed;left:0;right:0;bottom:0;z-index:45;justify-content:space-around;
@@ -250,13 +253,13 @@
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-logo">EF</div>
-        <div><strong>EF COMMAND</strong><small id="brandSubtitle">Ultimate · EF NRW</small></div>
+        <div><strong>EF COMMAND</strong><small id="brandSubtitle">Ultimate V4 · EF NRW</small></div>
       </div>
       <div class="nav-section-label">Kommandozentrum</div>
       <nav class="side-nav" id="primaryNav"></nav>
       <div class="nav-section-label">Werkzeuge</div>
       <nav class="side-nav" id="secondaryNav"></nav>
-      <div class="sidebar-footer"><span class="sync-dot"></span><span id="saveIndicator">Lokal gespeichert</span><br><span class="faint">Version 3.0 · PWA</span></div>
+      <div class="sidebar-footer"><span class="sync-dot"></span><span id="saveIndicator">Lokal gespeichert</span><br><span class="faint">Version 4.0 · Offline-first</span></div>
     </aside>
     <main id="appMain"></main>
   </div>
@@ -312,8 +315,11 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "ef-command-ultimate-v3";
-  const VERSION = "3.0.0";
+  const STORAGE_KEY = "ef-command-ultimate-v4";
+  const LEGACY_KEYS = ["ef-command-ultimate-v3", "ef-command-flat-v1"];
+  const VERSION = "4.0.0";
+  const DB_NAME = "ef-command-ultimate";
+  const DB_VERSION = 1;
   const uid = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const todayKey = (d = new Date()) => {
     const x = new Date(d); const y=x.getFullYear(),m=String(x.getMonth()+1).padStart(2,"0"),day=String(x.getDate()).padStart(2,"0");
@@ -328,17 +334,33 @@
     ["Mathematik","📐","#5b8cff"],["Deutsch","✍️","#34d399"],["Englisch","🌍","#fbbf24"],
     ["Geschichte","🏛️","#fb7185"],["Biologie","🧬","#a78bfa"],["Informatik","💻","#22d3ee"],
     ["Erdkunde","🗺️","#fb923c"],["Philosophie","🧠","#c084fc"],["Italienisch","🇮🇹","#4ade80"],
-    ["Sozialwissenschaften","⚖️","#f472b6"],["Sport","🏃","#38bdf8"],["Kunst","🎨","#f59e0b"]
+    ["Sozialwissenschaften","⚖️","#f472b6"],["Sport","🏃","#38bdf8"],["Kunst","🎨","#f59e0b"],["Musik","🎵","#818cf8"]
   ];
+  const PERIODS=[
+    [1,"08:00","08:45"],[2,"08:50","09:35"],[3,"09:55","10:40"],[4,"10:45","11:30"],
+    [5,"11:50","12:35"],[6,"12:35","13:20"],[7,"13:30","14:15"],[8,"14:15","15:00"],
+    [9,"15:05","15:50"],[10,"15:50","16:35"],[11,"16:35","17:20"],[12,"17:20","18:05"]
+  ];
+  const DAY_NAMES=["Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag","Sonntag"];
+
+  function defaultTimetable(subjects){
+    const sid=name=>subjects.find(s=>s.name===name)?.id||null;
+    const add=(day,period,name,room="")=>({id:uid(),day,period,subjectId:sid(name),room,note:"",type:"unterricht"});
+    return [
+      add(1,1,"Kunst"),add(1,2,"Kunst"),add(1,3,"Deutsch"),add(1,4,"Deutsch"),add(1,5,"Italienisch"),add(1,6,"Italienisch"),add(1,7,"Erdkunde"),add(1,8,"Erdkunde"),
+      add(2,1,"Biologie"),add(2,2,"Biologie"),add(2,3,"Informatik"),add(2,4,"Informatik"),add(2,5,"Italienisch"),add(2,6,"Mathematik"),add(2,7,"Englisch"),
+      add(3,1,"Informatik"),add(3,2,"Informatik"),add(3,3,"Musik"),add(3,4,"Musik"),add(3,5,"Mathematik"),add(3,6,"Mathematik"),
+      add(4,1,"Mathematik"),add(4,2,"Mathematik"),add(4,3,"Philosophie"),add(4,4,"Philosophie"),add(4,5,"Englisch"),add(4,6,"Englisch"),add(4,10,"Sport"),add(4,11,"Sport"),add(4,12,"Sport")
+    ];
+  }
 
   function freshState(){
-    const subjects = SUBJECT_PRESETS.slice(0,9).map(([name,emoji,color],i)=>({
-      id:uid(),name,emoji,color,target:i<3?3:2,priority:name==="Mathematik"||name==="Deutsch"?5:3,teacher:"",archived:false
-    }));
-    const sid = name => subjects.find(s=>s.name===name)?.id;
+    const subjects=SUBJECT_PRESETS.map(([name,emoji,color],i)=>({id:uid(),name,emoji,color,target:i<3?3:2,priority:name==="Mathematik"||name==="Deutsch"?5:3,teacher:"",archived:false}));
+    const sid=name=>subjects.find(s=>s.name===name)?.id;
     return {
+      schemaVersion:4,
       profile:{name:"Schercko",state:"Nordrhein-Westfalen",grade:"EF",school:"Gymnasium",repeatEF:true,targetAverage:2.5,onboardingCompleted:false},
-      settings:{animations:true,compact:false,accent:"blue",dailyGoal:75,defaultFocus:25,defaultBreak:5},
+      settings:{animations:true,compact:false,accent:"blue",dailyGoal:75,defaultFocus:25,defaultBreak:5,autoSnapshots:true},
       subjects,
       tasks:[
         {id:uid(),title:"Quadratische Funktionen wiederholen",subjectId:sid("Mathematik"),due:todayKey(new Date(Date.now()+86400000)),minutes:40,priority:5,status:"offen",progress:0,notes:"Scheitelpunktform und Nullstellen",subtasks:["Grundlagen lesen","3 Aufgaben rechnen"],createdAt:new Date().toISOString()},
@@ -346,79 +368,89 @@
         {id:uid(),title:"20 Englisch-Vokabeln wiederholen",subjectId:sid("Englisch"),due:todayKey(new Date(Date.now()+2*86400000)),minutes:20,priority:3,status:"offen",progress:0,notes:"",subtasks:[],createdAt:new Date().toISOString()}
       ],
       exams:[
-        {id:uid(),title:"Mathematik-Klausur",subjectId:sid("Mathematik"),date:todayKey(new Date(Date.now()+12*86400000)),target:3,confidence:2,topics:[
-          {id:uid(),title:"Scheitelpunktform",mastery:45},{id:uid(),title:"Nullstellen",mastery:55},{id:uid(),title:"Textaufgaben",mastery:25}
-        ]},
-        {id:uid(),title:"Deutsch-Klausur",subjectId:sid("Deutsch"),date:todayKey(new Date(Date.now()+21*86400000)),target:3,confidence:3,topics:[
-          {id:uid(),title:"Textanalyse",mastery:40},{id:uid(),title:"Zitate einbauen",mastery:50}
-        ]}
+        {id:uid(),title:"Mathematik-Klausur",subjectId:sid("Mathematik"),date:todayKey(new Date(Date.now()+12*86400000)),target:3,confidence:2,topics:[{id:uid(),title:"Scheitelpunktform",mastery:45},{id:uid(),title:"Nullstellen",mastery:55},{id:uid(),title:"Textaufgaben",mastery:25}]},
+        {id:uid(),title:"Deutsch-Klausur",subjectId:sid("Deutsch"),date:todayKey(new Date(Date.now()+21*86400000)),target:3,confidence:3,topics:[{id:uid(),title:"Textanalyse",mastery:40},{id:uid(),title:"Zitate einbauen",mastery:50}]}
       ],
-      grades:[],
-      sessions:[],
-      notes:[],
+      grades:[],sessions:[],notes:[],
       flashcards:[
-        {id:uid(),subjectId:sid("Mathematik"),front:"Wie lautet die Mitternachtsformel?",back:"x = (-b ± √(b² − 4ac)) / 2a"},
-        {id:uid(),subjectId:sid("Deutsch"),front:"Was gehört in die Einleitung einer Textanalyse?",back:"Autor, Titel, Textsorte, Erscheinungsjahr, Thema und Deutungshypothese."}
+        {id:uid(),subjectId:sid("Mathematik"),front:"Wie lautet die Mitternachtsformel?",back:"x = (-b ± √(b² − 4ac)) / 2a",due:todayKey(),interval:0,ease:2.5,repetitions:0,lapses:0,lastReviewed:null},
+        {id:uid(),subjectId:sid("Deutsch"),front:"Was gehört in die Einleitung einer Textanalyse?",back:"Autor, Titel, Textsorte, Erscheinungsjahr, Thema und Deutungshypothese.",due:todayKey(),interval:0,ease:2.5,repetitions:0,lapses:0,lastReviewed:null}
       ],
+      timetable:defaultTimetable(subjects),
+      absences:[],
+      errors:[],
+      weekPlan:[],
+      weekPlanStart:null,
       yearPlan:[
-        {id:uid(),month:"August",title:"EF-Neustart & Grundlagen",done:false},
-        {id:uid(),month:"September",title:"Arbeitsroutinen stabilisieren",done:false},
-        {id:uid(),month:"Oktober",title:"Erste Klausurphase auswerten",done:false},
-        {id:uid(),month:"November",title:"Lücken schließen",done:false},
-        {id:uid(),month:"Dezember",title:"Halbjahresstand prüfen",done:false},
-        {id:uid(),month:"Januar",title:"Neue Zielnoten festlegen",done:false},
-        {id:uid(),month:"Februar",title:"2. Halbjahr stark starten",done:false},
-        {id:uid(),month:"März",title:"Klausurtechnik verbessern",done:false},
-        {id:uid(),month:"April",title:"Defizitfächer retten",done:false},
-        {id:uid(),month:"Mai",title:"Zentrale Klausuren vorbereiten",done:false},
-        {id:uid(),month:"Juni",title:"Versetzung absichern",done:false},
-        {id:uid(),month:"Juli",title:"Jahresrückblick & Archiv",done:false}
+        {id:uid(),month:"August",title:"EF-Neustart & Grundlagen",done:false},{id:uid(),month:"September",title:"Arbeitsroutinen stabilisieren",done:false},{id:uid(),month:"Oktober",title:"Erste Klausurphase auswerten",done:false},{id:uid(),month:"November",title:"Lücken schließen",done:false},{id:uid(),month:"Dezember",title:"Halbjahresstand prüfen",done:false},{id:uid(),month:"Januar",title:"Neue Zielnoten festlegen",done:false},{id:uid(),month:"Februar",title:"2. Halbjahr stark starten",done:false},{id:uid(),month:"März",title:"Klausurtechnik verbessern",done:false},{id:uid(),month:"April",title:"Defizitfächer retten",done:false},{id:uid(),month:"Mai",title:"Zentrale Klausuren vorbereiten",done:false},{id:uid(),month:"Juni",title:"Versetzung absichern",done:false},{id:uid(),month:"Juli",title:"Jahresrückblick & Archiv",done:false}
       ],
-      streak:{current:0,best:0,lastStudyDate:null},
-      calendarMonth:todayKey().slice(0,7),
-      activity:[]
+      streak:{current:0,best:0,lastStudyDate:null},calendarMonth:todayKey().slice(0,7),activity:[]
     };
   }
 
-  function loadState(){
-    try{
-      const raw=localStorage.getItem(STORAGE_KEY);
-      if(!raw)return freshState();
-      const parsed=JSON.parse(raw);
-      const fresh=freshState();
-      return {...fresh,...parsed,profile:{...fresh.profile,...parsed.profile},settings:{...fresh.settings,...parsed.settings}};
-    }catch{return freshState()}
+
+  function openDatabase(){
+    return new Promise((resolve,reject)=>{
+      if(!("indexedDB" in window))return resolve(null);
+      const request=indexedDB.open(DB_NAME,DB_VERSION);
+      request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains("app"))db.createObjectStore("app");if(!db.objectStoreNames.contains("snapshots"))db.createObjectStore("snapshots")};
+      request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);
+    });
   }
-  let state=loadState();
+  async function idbGet(store,key){try{const db=await openDatabase();if(!db)return null;return await new Promise((resolve,reject)=>{const r=db.transaction(store,"readonly").objectStore(store).get(key);r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error)})}catch{return null}}
+  async function idbPut(store,key,value){try{const db=await openDatabase();if(!db)return false;await new Promise((resolve,reject)=>{const r=db.transaction(store,"readwrite").objectStore(store).put(value,key);r.onsuccess=()=>resolve();r.onerror=()=>reject(r.error)});return true}catch{return false}}
+  async function idbDelete(store,key){try{const db=await openDatabase();if(!db)return false;await new Promise((resolve,reject)=>{const r=db.transaction(store,"readwrite").objectStore(store).delete(key);r.onsuccess=()=>resolve();r.onerror=()=>reject(r.error)});return true}catch{return false}}
+  async function idbAll(store){try{const db=await openDatabase();if(!db)return[];return await new Promise((resolve,reject)=>{const r=db.transaction(store,"readonly").objectStore(store).getAll();r.onsuccess=()=>resolve(r.result||[]);r.onerror=()=>reject(r.error)})}catch{return[]}}
+
+  function normalizeState(raw){
+    const fresh=freshState(),parsed=raw&&typeof raw==="object"?raw:{};
+    const out={...fresh,...parsed,profile:{...fresh.profile,...(parsed.profile||{})},settings:{...fresh.settings,...(parsed.settings||{})}};
+    for(const [name,emoji,color] of SUBJECT_PRESETS){if(!out.subjects.some(s=>s.name===name))out.subjects.push({id:uid(),name,emoji,color,target:3,priority:3,teacher:"",archived:false})}
+    if(!Array.isArray(out.timetable)||(!out.timetable.length&&(parsed.schemaVersion||0)<4))out.timetable=defaultTimetable(out.subjects);
+    out.absences=Array.isArray(out.absences)?out.absences:[];out.errors=Array.isArray(out.errors)?out.errors:[];out.weekPlan=Array.isArray(out.weekPlan)?out.weekPlan:[];
+    out.flashcards=(out.flashcards||[]).map(f=>({...f,due:f.due||todayKey(),interval:Number(f.interval)||0,ease:Number(f.ease)||2.5,repetitions:Number(f.repetitions)||0,lapses:Number(f.lapses)||0,lastReviewed:f.lastReviewed||null}));
+    out.errors=out.errors.map(x=>({...x,due:x.due||todayKey(),status:x.status||"offen",confidence:Number(x.confidence)||1}));
+    out.schemaVersion=4;return out;
+  }
+  async function loadState(){
+    const fromDb=await idbGet("app","state");if(fromDb)return normalizeState(fromDb);
+    let raw=localStorage.getItem(STORAGE_KEY);if(!raw){for(const key of LEGACY_KEYS){raw=localStorage.getItem(key);if(raw)break}}
+    try{return normalizeState(raw?JSON.parse(raw):freshState())}catch{return freshState()}
+  }
+  let state=freshState();
   let page="dashboard";
   let taskView="liste";
   let taskFilter="alle";
   let librarySource="wikipedia";
   let libraryResults=[];
   let libraryLoading=false;
-  let calendarCursor=new Date(state.calendarMonth+"-01T12:00:00");
+  let calendarCursor=new Date();
   let focus={taskId:null,total:0,left:0,running:false,interval:null,startedAt:null};
   let flashIndex=0;
   let onboardingStep=0;
   let selectedPreset="nrw";
+  let snapshotList=[];
 
   const primaryPages=[
     ["dashboard","Heute","⌂"],["planner","Planer","▦"],["tasks","Aufgaben","✓"],["exams","Klausuren","⚑"],["subjects","Fächer","◫"]
   ];
   const secondaryPages=[
-    ["grades","Noten","▥"],["focus","Fokus","◎"],["library","Lernhilfe","✦"],["insights","Fortschritt","↗"],["settings","Einstellungen","⚙"]
+    ["timetable","Stundenplan","▤"],["absences","Fehlzeiten","◷"],["errors","Fehlerarchiv","⚠"],["grades","Noten","▥"],["focus","Fokus","◎"],["library","Lernhilfe","✦"],["insights","Fortschritt","↗"],["settings","Einstellungen","⚙"]
   ];
   const allPages=[...primaryPages,...secondaryPages];
 
-  function save(){
+  async function save(){
     localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
-    const el=document.getElementById("saveIndicator");
-    if(el){el.textContent="Gespeichert · "+new Date().toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});}
+    const ok=await idbPut("app","state",state);
+    const el=document.getElementById("saveIndicator");if(el)el.textContent=(ok?"IndexedDB gespeichert":"Lokal gespeichert")+" · "+new Date().toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
   }
-  function mutate(fn,message){
-    const copy=structuredClone(state);state=fn(copy)||copy;save();render();
-    if(message)toast(message,"success");
+  function mutate(fn,message){const copy=structuredClone(state);state=fn(copy)||copy;save();render();if(message)toast(message,"success")}
+  async function createSnapshot(kind="daily"){
+    const id=kind==="daily"?`daily-${todayKey()}`:`manual-${Date.now()}`;const existing=await idbGet("snapshots",id);if(existing&&kind==="daily")return;
+    await idbPut("snapshots",id,{id,kind,createdAt:new Date().toISOString(),state:structuredClone(state)});await refreshSnapshots();
   }
+  async function refreshSnapshots(){snapshotList=(await idbAll("snapshots")).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,12)}
+  async function init(){state=await loadState();calendarCursor=new Date((state.calendarMonth||todayKey().slice(0,7))+"-01T12:00:00");await refreshSnapshots();if(state.settings.autoSnapshots!==false)await createSnapshot("daily");render()}
   function subject(id){return state.subjects.find(s=>s.id===id)}
   function openTasks(){return state.tasks.filter(t=>t.status!=="erledigt")}
   function completedToday(){return state.tasks.filter(t=>t.status==="erledigt"&&t.completedAt?.slice(0,10)===todayKey()).length}
@@ -521,9 +553,12 @@
   function riskItems(){
     const items=[];const overdue=openTasks().filter(t=>t.due&&daysBetween(t.due)<0).length;if(overdue)items.push(`⚠️ ${overdue} überfällige Aufgabe(n)`);
     const close=state.exams.filter(e=>daysBetween(e.date)>=0&&daysBetween(e.date)<=7);if(close.length)items.push(`📝 ${close.length} Klausur(en) in den nächsten 7 Tagen`);
+    const unexcused=state.absences.filter(a=>!a.excused).reduce((n,a)=>n+(a.hours||1),0);if(unexcused)items.push(`◷ ${unexcused} unentschuldigte Fehlstunde(n)`);
+    const dueCards=state.flashcards.filter(f=>!f.due||f.due<=todayKey()).length;if(dueCards)items.push(`🃏 ${dueCards} Lernkarte(n) fällig`);
+    const dueErrors=state.errors.filter(x=>x.status!=="sicher"&&x.due<=todayKey()).length;if(dueErrors)items.push(`🧯 ${dueErrors} Fehler zur Wiederholung fällig`);
     const bad=state.subjects.filter(s=>{const a=weightedAvg(s.id);return a&&a>s.target+0.8});if(bad.length)items.push(`📉 ${bad.map(s=>s.name).join(", ")} liegt deutlich über der Zielnote`);
     if(!items.length)items.push("✅ Keine akute Gefahr erkannt","🧠 Nutze freie Zeit für Wiederholung","📚 Halte Aufgaben und Klausuren aktuell");
-    return items.slice(0,3).map(x=>`<div class="task-row"><div class="row-main">${x}</div></div>`).join("")
+    return items.slice(0,4).map(x=>`<div class="task-row"><div class="row-main">${x}</div></div>`).join("")
   }
   function taskRow(t){
     const s=subject(t.subjectId);const overdue=t.due&&daysBetween(t.due)<0;
@@ -544,26 +579,29 @@
     </div>`
   }
 
+  function mondayOf(date=new Date()){const d=new Date(date);const day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);d.setHours(12,0,0,0);return d}
+  function weekDates(){const monday=mondayOf();return Array.from({length:7},(_,i)=>new Date(monday.getTime()+i*86400000))}
   function planner(){
-    const month=calendarCursor;const year=month.getFullYear(),m=month.getMonth();const first=new Date(year,m,1);const offset=(first.getDay()+6)%7;const days=new Date(year,m+1,0).getDate();const prevDays=new Date(year,m,0).getDate();
-    const cells=[];for(let i=0;i<42;i++){let day=i-offset+1,cellDate,outside=false;if(day<1){cellDate=new Date(year,m-1,prevDays+day);outside=true}else if(day>days){cellDate=new Date(year,m+1,day-days);outside=true}else cellDate=new Date(year,m,day);
-      const key=todayKey(cellDate);const events=[...state.tasks.filter(t=>t.due===key),...state.exams.filter(e=>e.date===key),...state.sessions.filter(s=>s.date===key)];
-      cells.push(`<div class="day ${outside?"outside":""} ${key===todayKey()?"today":""}"><div class="day-number">${cellDate.getDate()}</div>${events.slice(0,3).map(ev=>`<div class="event-dot ${ev.topics?"exam":ev.minutes&&ev.taskId?"session":""}"></div>`).join("")}</div>`)
-    }
+    const month=calendarCursor,year=month.getFullYear(),m=month.getMonth(),first=new Date(year,m,1),offset=(first.getDay()+6)%7,days=new Date(year,m+1,0).getDate(),prevDays=new Date(year,m,0).getDate();
+    const cells=[];for(let i=0;i<42;i++){let day=i-offset+1,cellDate,outside=false;if(day<1){cellDate=new Date(year,m-1,prevDays+day);outside=true}else if(day>days){cellDate=new Date(year,m+1,day-days);outside=true}else cellDate=new Date(year,m,day);const key=todayKey(cellDate);const events=[...state.tasks.filter(t=>t.due===key),...state.exams.filter(e=>e.date===key),...state.sessions.filter(s=>s.date===key),...state.weekPlan.filter(x=>x.date===key)];cells.push(`<div class="day ${outside?"outside":""} ${key===todayKey()?"today":""}"><div class="day-number">${cellDate.getDate()}</div>${events.slice(0,4).map(ev=>`<div class="event-dot ${ev.topics?"exam":ev.taskId?"session":""}"></div>`).join("")}</div>`)}
+    const week=weekDates();
     return `<div class="page">
-      ${header("Planer","Kalender, Jahresziele und ein realistischer Lernfahrplan.",`<button class="btn btn-primary" data-action="auto-plan">✦ Woche planen</button>`)}
-      <div class="tabs"><button class="tab active">Monat</button><button class="tab" data-action="scroll-year">Schuljahr</button><button class="tab" data-action="show-week-plan">Wochenplan</button></div>
-      <section class="card">
-        <div class="calendar-head"><button class="small-btn" data-action="calendar-prev">‹</button><h2>${month.toLocaleDateString("de-DE",{month:"long",year:"numeric"})}</h2><button class="small-btn" data-action="calendar-next">›</button></div>
-        <div class="calendar-grid">${["Mo","Di","Mi","Do","Fr","Sa","So"].map(d=>`<div class="weekday">${d}</div>`).join("")}${cells.join("")}</div>
+      ${header("Planer","Kalender, echter Wochenplan und Schuljahres-Meilensteine.",`<button class="btn btn-secondary" data-action="clear-week-plan">Leeren</button><button class="btn btn-primary" data-action="auto-plan">✦ Woche intelligent planen</button>`)}
+      <div class="tabs"><button class="tab active">Monat</button><button class="tab" data-action="scroll-week">Wochenplan</button><button class="tab" data-action="scroll-year">Schuljahr</button></div>
+      <section class="card"><div class="calendar-head"><button class="small-btn" data-action="calendar-prev">‹</button><h2>${month.toLocaleDateString("de-DE",{month:"long",year:"numeric"})}</h2><button class="small-btn" data-action="calendar-next">›</button></div><div class="calendar-grid">${["Mo","Di","Mi","Do","Fr","Sa","So"].map(d=>`<div class="weekday">${d}</div>`).join("")}${cells.join("")}</div></section>
+      <section class="card" id="weekPlanSection" style="margin-top:16px"><div class="section-title"><div><h2>Dein Wochenplan</h2><div class="muted">Berücksichtigt Stundenplan, Priorität, Frist und Klausurnähe.</div></div><span class="badge blue">${state.weekPlan.reduce((n,x)=>n+x.minutes,0)} Min.</span></div>
+        <div class="week-plan-grid">${week.map((d,i)=>{const key=todayKey(d),items=state.weekPlan.filter(x=>x.date===key).sort((a,b)=>a.start.localeCompare(b.start));return `<div class="week-column ${key===todayKey()?"today":""}"><h3>${DAY_NAMES[i]}<br><span class="muted">${dateDE(key).slice(0,5)}</span></h3>${items.map(x=>`<div class="plan-block ${x.done?"done":""}" data-action="toggle-plan" data-id="${x.id}"><div class="plan-time">${x.start} · ${x.minutes} Min.</div><strong>${esc(x.title)}</strong><div class="muted">${esc(subject(x.subjectId)?.name||"Allgemein")}</div></div>`).join("")||`<div class="faint">Noch frei</div>`}</div>`}).join("")}</div>
       </section>
-      <section class="card" id="yearPlanSection" style="margin-top:16px">
-        <div class="section-title"><h2>Schuljahres-Kommandoplan</h2><span class="badge blue">${state.yearPlan.filter(x=>x.done).length}/${state.yearPlan.length} Meilensteine</span></div>
-        <div class="timeline">${state.yearPlan.map(x=>`<div class="timeline-item"><strong>${esc(x.month)} · ${esc(x.title)}</strong><div class="muted" style="margin-top:5px">${x.done?"Abgeschlossen":"Noch offen"}</div><button class="btn btn-ghost" style="margin-top:8px;min-height:36px;padding:7px 11px" data-action="toggle-milestone" data-id="${x.id}">${x.done?"↩ Wieder öffnen":"✓ Abschließen"}</button></div>`).join("")}</div>
-      </section>
+      <section class="card" id="yearPlanSection" style="margin-top:16px"><div class="section-title"><h2>Schuljahres-Kommandoplan</h2><span class="badge blue">${state.yearPlan.filter(x=>x.done).length}/${state.yearPlan.length} Meilensteine</span></div><div class="timeline">${state.yearPlan.map(x=>`<div class="timeline-item"><strong>${esc(x.month)} · ${esc(x.title)}</strong><div class="muted" style="margin-top:5px">${x.done?"Abgeschlossen":"Noch offen"}</div><button class="btn btn-ghost" style="margin-top:8px;min-height:36px;padding:7px 11px" data-action="toggle-milestone" data-id="${x.id}">${x.done?"↩ Wieder öffnen":"✓ Abschließen"}</button></div>`).join("")}</div></section>
     </div>`
   }
-
+  function generateWeekPlan(){
+    const week=weekDates(),tasks=[...openTasks()].sort((a,b)=>priorityScore(b)-priorityScore(a)),remaining=new Map(tasks.map(t=>[t.id,Math.max(10,(t.minutes||25)-Math.round((t.minutes||25)*(t.progress||0)/100))])),result=[];
+    for(let di=0;di<7;di++){const date=week[di],key=todayKey(date);if(key<todayKey())continue;const day=di+1;const lessons=state.timetable.filter(l=>l.day===day);const lastPeriod=lessons.length?Math.max(...lessons.map(l=>l.period)):0;const period=PERIODS.find(p=>p[0]===lastPeriod);let startMin=di<5?(period?Number(period[2].slice(0,2))*60+Number(period[2].slice(3))+60:16*60):10*60;let capacity=di<5?90:150;let blocks=0;
+      for(const t of tasks){let left=remaining.get(t.id)||0;if(left<=0||capacity<15||blocks>=3)continue;if(t.due&&t.due<key&&di>1)continue;const chunk=Math.min(left,capacity,t.priority>=4?45:30);const hh=String(Math.floor(startMin/60)).padStart(2,"0"),mm=String(startMin%60).padStart(2,"0");result.push({id:uid(),date:key,start:`${hh}:${mm}`,minutes:chunk,title:t.title,taskId:t.id,subjectId:t.subjectId,done:false});remaining.set(t.id,left-chunk);capacity-=chunk;startMin+=chunk+15;blocks++}
+    }
+    mutate(s=>{s.weekPlan=result;s.weekPlanStart=todayKey(week[0]);return s},`${result.length} Lernblöcke geplant`)
+  }
   function tasksPage(){
     let list=state.tasks.filter(t=>taskFilter==="alle"||taskFilter==="offen"&&t.status!=="erledigt"||taskFilter==="erledigt"&&t.status==="erledigt"||taskFilter==="überfällig"&&t.status!=="erledigt"&&t.due&&daysBetween(t.due)<0);
     list=[...list].sort((a,b)=>priorityScore(b)-priorityScore(a));
@@ -656,33 +694,28 @@
     ["📐","Quadratische Funktionen","Mathematik"],["✍️","Textanalyse Aufbau","Deutsch"],["🌍","Englische Analyse","Englisch"],["🏛️","Quellenanalyse","Geschichte"],
     ["🧬","Zellbiologie","Biologie"],["💻","Programmieren Grundlagen","Informatik"],["🧠","Argumentation","Philosophie"],["🗺️","Raumanalyse","Erdkunde"]
   ];
+  function dueFlashcards(){return state.flashcards.filter(f=>!f.due||f.due<=todayKey()).sort((a,b)=>(a.due||"").localeCompare(b.due||""))}
   function libraryPage(){
+    const due=dueFlashcards();
     return `<div class="page">
-      ${header("Lernhilfe","Kostenlose Erklärungen, freie Lehrbücher, Lernkarten und eigene Notizen.",`<button class="btn btn-secondary" data-action="add-flashcard">＋ Lernkarte</button>`)}
-      <section class="card">
-        <div class="section-title"><div><h2>Thema erklären</h2><div class="muted">Suche in Wikipedia oder freien Wikibooks.</div></div><span class="badge green">Kostenlos · kein API-Key</span></div>
-        <div class="search-box"><input id="libraryQuery" placeholder="z. B. quadratische Funktionen, Weimarer Republik, Zellatmung"><button class="btn btn-primary" data-action="library-search">⌕ Suchen</button></div>
-        <div class="source-tabs"><button class="tab ${librarySource==="wikipedia"?"active":""}" data-action="library-source" data-value="wikipedia">Wikipedia</button><button class="tab ${librarySource==="wikibooks"?"active":""}" data-action="library-source" data-value="wikibooks">Wikibooks</button></div>
-        <div id="libraryResults">${libraryLoading?`<div class="empty">Lernquelle wird geladen …</div>`:libraryResults.length?libraryResults.map(r=>`<article class="result-card"><h3>${esc(r.title)}</h3><p>${esc(r.extract||"Keine Kurzbeschreibung verfügbar.")}</p><a href="${r.url}" target="_blank" rel="noopener">Originalquelle öffnen ↗</a></article>`).join(""):`<div class="quick-guides">${QUICK_GUIDES.map(g=>`<button class="guide" data-action="quick-guide" data-query="${esc(g[1])}"><div style="font-size:24px">${g[0]}</div><strong>${g[1]}</strong><div class="muted">${g[2]}</div></button>`).join("")}</div>`}</div>
-      </section>
-      <div class="grid-2" style="margin-top:16px">
-        <section class="card">
-          <div class="section-title"><h2>Lernkarten</h2><span class="badge">${state.flashcards.length}</span></div>
-          ${state.flashcards.length?flashcardView():empty("🃏","Keine Lernkarten","Erstelle Frage-und-Antwort-Karten.")}
-        </section>
-        <section class="card">
-          <div class="section-title"><h2>Eigene Notizen</h2><button class="btn btn-ghost" data-action="add-note">＋ Notiz</button></div>
-          <div class="stack">${state.notes.slice(-6).reverse().map(n=>`<div class="task-row"><div style="font-size:22px">📝</div><div class="row-main"><strong>${esc(n.title)}</strong><small>${esc(n.text).slice(0,100)}</small></div><button class="small-btn" data-action="delete-note" data-id="${n.id}">×</button></div>`).join("")||empty("📝","Noch keine Notizen","Speichere Zusammenfassungen und Merksätze.")}</div>
-        </section>
+      ${header("Lernhilfe","Kostenlose Quellen, echtes Spaced Repetition, Lernkarten und eigene Notizen.",`<button class="btn btn-secondary" data-action="add-flashcard">＋ Lernkarte</button>`)}
+      <div class="metrics">${metric("Fällige Karten",due.length,"heute wiederholen")}${metric("Gesamte Karten",state.flashcards.length)}${metric("Wiederholungen",state.flashcards.reduce((n,f)=>n+(f.repetitions||0),0))}${metric("Fehler fällig",state.errors.filter(x=>x.status!=="sicher"&&x.due<=todayKey()).length)}</div>
+      <div class="grid-2">
+        <section class="card"><div class="section-title"><h2>Spaced Repetition</h2><span class="badge ${due.length?"yellow":"green"}">${due.length?due.length+" fällig":"Alles gelernt"}</span></div>${state.flashcards.length?flashcardView():empty("🃏","Keine Lernkarten","Erstelle Frage-und-Antwort-Karten.")}</section>
+        <section class="card"><div class="section-title"><div><h2>Thema erklären</h2><div class="muted">Wikipedia und Wikibooks als kostenlose Bonusquellen.</div></div><span class="badge green">Kein API-Key</span></div><div class="search-box"><input id="libraryQuery" placeholder="z. B. quadratische Funktionen"><button class="btn btn-primary" data-action="library-search">⌕ Suchen</button></div><div class="source-tabs"><button class="tab ${librarySource==="wikipedia"?"active":""}" data-action="library-source" data-value="wikipedia">Wikipedia</button><button class="tab ${librarySource==="wikibooks"?"active":""}" data-action="library-source" data-value="wikibooks">Wikibooks</button></div><div id="libraryResults">${libraryLoading?`<div class="empty">Quelle wird geladen …</div>`:libraryResults.length?libraryResults.map(r=>`<article class="result-card"><h3>${esc(r.title)}</h3><p>${esc(r.extract||"Keine Kurzbeschreibung verfügbar.")}</p><a href="${r.url}" target="_blank" rel="noopener">Originalquelle öffnen ↗</a></article>`).join(""):`<div class="quick-guides">${QUICK_GUIDES.map(g=>`<button class="guide" data-action="quick-guide" data-query="${esc(g[1])}"><div style="font-size:24px">${g[0]}</div><strong>${g[1]}</strong><div class="muted">${g[2]}</div></button>`).join("")}</div>`}</div></section>
       </div>
+      <section class="card" style="margin-top:16px"><div class="section-title"><h2>Eigene Notizen</h2><button class="btn btn-ghost" data-action="add-note">＋ Notiz</button></div><div class="stack">${state.notes.slice(-8).reverse().map(n=>`<div class="task-row"><div style="font-size:22px">📝</div><div class="row-main"><strong>${esc(n.title)}</strong><small>${esc(n.text).slice(0,130)}</small></div><button class="small-btn" data-action="delete-note" data-id="${n.id}">×</button></div>`).join("")||empty("📝","Noch keine Notizen","Speichere Zusammenfassungen und Merksätze.")}</div></section>
     </div>`
   }
   function flashcardView(){
-    flashIndex=clamp(flashIndex,0,state.flashcards.length-1);const f=state.flashcards[flashIndex],s=subject(f.subjectId);
-    return `<div class="flashcard" id="flashcard" data-action="flip-card"><div class="flashcard-inner"><div class="flash-front"><span class="badge blue">${esc(s?.emoji||"📘")} ${esc(s?.name||"Allgemein")}</span><h2>${esc(f.front)}</h2><div class="muted">Tippen zum Umdrehen</div></div><div class="flash-back"><span class="eyebrow">Antwort</span><h2>${esc(f.back)}</h2></div></div></div>
-      <div style="display:flex;justify-content:center;gap:10px"><button class="small-btn" data-action="flash-prev">‹</button><span class="badge">${flashIndex+1}/${state.flashcards.length}</span><button class="small-btn" data-action="flash-next">›</button></div>`
+    const queue=dueFlashcards().length?dueFlashcards():[...state.flashcards].sort((a,b)=>(a.due||"").localeCompare(b.due||""));flashIndex=clamp(flashIndex,0,queue.length-1);const f=queue[flashIndex],s=subject(f.subjectId);
+    return `<div class="flashcard" id="flashcard" data-action="flip-card"><div class="flashcard-inner"><div class="flash-front"><span class="badge blue">${esc(s?.emoji||"📘")} ${esc(s?.name||"Allgemein")}</span><h2>${esc(f.front)}</h2><div class="muted">Tippen zum Umdrehen · fällig ${dateDE(f.due)}</div></div><div class="flash-back"><span class="eyebrow">Antwort</span><h2>${esc(f.back)}</h2></div></div></div>
+      <div class="review-actions"><button data-action="review-card" data-id="${f.id}" data-rating="again">↺<br><small>Nochmal</small></button><button data-action="review-card" data-id="${f.id}" data-rating="hard">◔<br><small>Schwer</small></button><button data-action="review-card" data-id="${f.id}" data-rating="good">✓<br><small>Gut</small></button><button data-action="review-card" data-id="${f.id}" data-rating="easy">⚡<br><small>Leicht</small></button></div>
+      <div style="display:flex;justify-content:center;gap:10px;margin-top:10px"><button class="small-btn" data-action="flash-prev">‹</button><span class="badge">${flashIndex+1}/${queue.length} · Intervall ${f.interval||0} T.</span><button class="small-btn" data-action="flash-next">›</button></div>`
   }
-
+  function reviewFlashcard(id,rating){
+    mutate(s=>{const f=s.flashcards.find(x=>x.id===id);if(!f)return s;let interval=f.interval||0,ease=f.ease||2.5,reps=f.repetitions||0;if(rating==="again"){reps=0;interval=1;ease=Math.max(1.3,ease-.2);f.lapses=(f.lapses||0)+1}else if(rating==="hard"){reps+=1;interval=Math.max(1,Math.round((interval||1)*1.2));ease=Math.max(1.3,ease-.15)}else if(rating==="good"){interval=reps===0?1:reps===1?3:Math.max(4,Math.round(interval*ease));reps+=1}else{interval=reps===0?4:Math.max(6,Math.round((interval||1)*ease*1.3));reps+=1;ease=Math.min(3.2,ease+.15)}const d=new Date();d.setDate(d.getDate()+interval);Object.assign(f,{interval,ease,repetitions:reps,due:todayKey(d),lastReviewed:new Date().toISOString()});return s},"Wiederholung geplant");flashIndex=0
+  }
   function insightsPage(){
     const last7=Array.from({length:7},(_,i)=>{const d=new Date(Date.now()-(6-i)*86400000),key=todayKey(d);return {label:d.toLocaleDateString("de-DE",{weekday:"short"}),minutes:state.sessions.filter(s=>s.date===key).reduce((a,s)=>a+s.minutes,0)}});const max=Math.max(1,...last7.map(x=>x.minutes));
     const subjectMinutes=state.subjects.map(s=>({s,minutes:state.sessions.filter(x=>x.subjectId===s.id).reduce((a,x)=>a+x.minutes,0)})).sort((a,b)=>b.minutes-a.minutes);
@@ -705,44 +738,42 @@
     ];return data.map(x=>`<div class="metric-card"><div style="font-size:26px">${x[0]}</div><strong style="font-size:18px">${x[1]}</strong><div class="muted">${x[2]}</div></div>`).join("")
   }
 
+  function timetablePage(){
+    const maxPeriod=Math.max(8,...state.timetable.map(x=>x.period||0));
+    return `<div class="page">${header("Stundenplan","Unterricht, Räume und freie Lernfenster. Das NRW-EF-Preset ist bereits vorbereitet.",`<button class="btn btn-primary" data-action="add-lesson">＋ Stunde</button>`)}
+      <section class="card"><div class="section-title"><div><h2>Wochenübersicht</h2><div class="muted">Tippe auf einen belegten Block, um ihn zu bearbeiten.</div></div><span class="status-pill">offline gespeichert</span></div><div class="timetable-wrap"><table class="timetable-table"><thead><tr><th>Zeit</th>${DAY_NAMES.slice(0,5).map(d=>`<th>${d}</th>`).join("")}</tr></thead><tbody>${PERIODS.filter(p=>p[0]<=maxPeriod).map(p=>`<tr><td class="period-label"><strong>${p[0]}. Std.</strong><br>${p[1]}<br>${p[2]}</td>${[1,2,3,4,5].map(day=>{const l=state.timetable.find(x=>x.day===day&&x.period===p[0]),sub=l?subject(l.subjectId):null;return `<td>${l?`<div class="lesson-cell" data-action="edit-lesson" data-id="${l.id}" style="border-left:4px solid ${sub?.color||"#64748b"}"><div class="lesson-name">${esc(sub?.emoji||"📘")} ${esc(sub?.name||"Freistunde")}</div><div class="lesson-meta">${esc(l.room||"Kein Raum")} ${l.note?"· "+esc(l.note):""}</div></div>`:`<div class="lesson-cell empty-cell" data-action="add-lesson-slot" data-day="${day}" data-period="${p[0]}">＋</div>`}</td>`}).join("")}</tr>`).join("")}</tbody></table></div></section>
+      <section class="card" style="margin-top:16px"><div class="section-title"><h2>Freie Lernfenster</h2></div><div class="grid-3">${[1,2,3,4,5].map(day=>{const list=state.timetable.filter(x=>x.day===day),last=list.length?Math.max(...list.map(x=>x.period)):0,p=PERIODS.find(x=>x[0]===last);return `<div class="metric-card"><span>${DAY_NAMES[day-1]}</span><strong>${p?p[2]:"frei"}</strong><small>${p?"reguläres Schulende":"kein Unterricht eingetragen"}</small></div>`}).join("")}</div></section>
+    </div>`
+  }
+  function lessonForm(l={}){return `<div class="form-grid"><label class="field"><span>Tag</span><select id="lDay">${DAY_NAMES.slice(0,5).map((d,i)=>`<option value="${i+1}" ${Number(l.day)===i+1?"selected":""}>${d}</option>`).join("")}</select></label><label class="field"><span>Stunde</span><select id="lPeriod">${PERIODS.map(p=>`<option value="${p[0]}" ${Number(l.period)===p[0]?"selected":""}>${p[0]}. · ${p[1]}–${p[2]}</option>`).join("")}</select></label><label class="field"><span>Fach</span><select id="lSubject">${state.subjects.filter(s=>!s.archived).map(s=>`<option value="${s.id}" ${l.subjectId===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}</select></label><label class="field"><span>Raum</span><input id="lRoom" value="${esc(l.room||"")}"></label><label class="field full"><span>Notiz</span><input id="lNote" value="${esc(l.note||"")}"></label></div><div class="chips" style="margin-top:15px">${l.id?`<button class="btn btn-danger" data-action="delete-lesson" data-id="${l.id}">Löschen</button>`:""}<button class="btn btn-primary" data-action="save-lesson" data-id="${l.id||""}">Speichern</button></div>`}
+
+  function absencesPage(){
+    const total=state.absences.reduce((n,a)=>n+(a.hours||1),0),unexcused=state.absences.filter(a=>!a.excused).reduce((n,a)=>n+(a.hours||1),0),pending=state.absences.filter(a=>a.excused&&!a.proofSubmitted).length,rate=total?Math.round((total-unexcused)/total*100):100;
+    return `<div class="page">${header("Fehlzeiten","Entschuldigungen, Nachweise und unentschuldigte Stunden kontrollieren.",`<button class="btn btn-primary" data-action="add-absence">＋ Fehlzeit</button>`)}<div class="absence-summary">${metric("Fehlstunden",total)}${metric("Unentschuldigt",unexcused)}${metric("Nachweis offen",pending)}${metric("Entschuldigt",rate+"%")}</div><section class="card" style="margin-top:16px"><div class="section-title"><h2>Einträge</h2><span class="badge ${unexcused?"red":"green"}">${unexcused?"Handlungsbedarf":"Alles geklärt"}</span></div><div class="stack">${[...state.absences].sort((a,b)=>b.date.localeCompare(a.date)).map(a=>`<div class="task-row"><div style="font-size:24px">${a.excused?"✅":"⚠️"}</div><div class="row-main"><strong>${esc(subject(a.subjectId)?.name||"Allgemein")} · ${a.hours} Std.</strong><small>${dateDE(a.date)} · ${a.reason?esc(a.reason):"Kein Grund"}</small><div class="chips" style="margin-top:7px"><span class="badge ${a.excused?"green":"red"}">${a.excused?"entschuldigt":"unentschuldigt"}</span>${a.excused?`<span class="badge ${a.proofSubmitted?"green":"yellow"}">${a.proofSubmitted?"Nachweis abgegeben":"Nachweis offen"}</span>`:""}</div></div><button class="small-btn" data-action="edit-absence" data-id="${a.id}">✎</button></div>`).join("")||empty("◷","Keine Fehlzeiten","Gut so. Neue Einträge kannst du sofort dokumentieren.")}</div></section></div>`
+  }
+  function absenceForm(a={}){return `<div class="form-grid"><label class="field"><span>Datum</span><input id="aDate" type="date" value="${a.date||todayKey()}"></label><label class="field"><span>Fach</span><select id="aSubject"><option value="">Ganzer Schultag</option>${state.subjects.map(s=>`<option value="${s.id}" ${a.subjectId===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}</select></label><label class="field"><span>Stunden</span><input id="aHours" type="number" min="1" max="12" value="${a.hours||1}"></label><label class="field"><span>Status</span><select id="aExcused"><option value="yes" ${a.excused!==false?"selected":""}>Entschuldigt</option><option value="no" ${a.excused===false?"selected":""}>Unentschuldigt</option></select></label><label class="field"><span>Nachweis abgegeben</span><select id="aProof"><option value="yes" ${a.proofSubmitted?"selected":""}>Ja</option><option value="no" ${!a.proofSubmitted?"selected":""}>Nein</option></select></label><label class="field"><span>Grund</span><input id="aReason" value="${esc(a.reason||"")}"></label></div><div class="chips" style="margin-top:15px">${a.id?`<button class="btn btn-danger" data-action="delete-absence" data-id="${a.id}">Löschen</button>`:""}<button class="btn btn-primary" data-action="save-absence" data-id="${a.id||""}">Speichern</button></div>`}
+
+  function errorsPage(){
+    const due=state.errors.filter(x=>x.status!=="sicher"&&x.due<=todayKey()),categories=[...new Set(state.errors.map(x=>x.category).filter(Boolean))];
+    return `<div class="page">${header("Fehlerarchiv","Verwandle jeden Fehler in eine konkrete Wiederholungsaufgabe.",`<button class="btn btn-primary" data-action="add-error">＋ Fehler erfassen</button>`)}<div class="metrics">${metric("Gespeichert",state.errors.length)}${metric("Heute fällig",due.length)}${metric("Sicher beherrscht",state.errors.filter(x=>x.status==="sicher").length)}${metric("Fehlertypen",categories.length)}</div><div class="stack">${[...state.errors].sort((a,b)=>a.due.localeCompare(b.due)).map(x=>`<section class="card error-card"><div class="section-title"><div><span class="badge blue">${esc(subject(x.subjectId)?.emoji||"📘")} ${esc(subject(x.subjectId)?.name||"Allgemein")}</span><h2 style="margin:10px 0 4px">${esc(x.title)}</h2><div class="muted">${esc(x.category||"Verständnisfehler")} · Wiederholung ${dateDE(x.due)}</div></div><span class="badge ${x.status==="sicher"?"green":x.due<=todayKey()?"red":"yellow"}">${x.status==="sicher"?"sicher":x.due<=todayKey()?"fällig":"geplant"}</span></div><div class="error-grid"><div class="compare-box wrong"><span class="eyebrow" style="color:#fecdd3">Was war falsch?</span><p>${esc(x.wrong||"Nicht beschrieben")}</p></div><div class="compare-box correct"><span class="eyebrow" style="color:#a7f3d0">Richtige Lösung</span><p>${esc(x.correct||"Noch offen")}</p></div></div><p class="muted"><strong>Ursache:</strong> ${esc(x.cause||"Noch nicht analysiert")}</p><div class="chips"><button class="btn btn-secondary" data-action="review-error" data-id="${x.id}">↻ Wiederholt</button><button class="btn btn-ghost" data-action="edit-error" data-id="${x.id}">✎ Bearbeiten</button></div></section>`).join("")||empty("🧯","Noch kein Fehler erfasst","Nach Übungen und Klausuren die wichtigsten Fehler dokumentieren.")}</div></div>`
+  }
+  function errorForm(x={}){return `<div class="form-grid"><label class="field full"><span>Kurzer Titel</span><input id="eTitle" value="${esc(x.title||"")}" placeholder="z. B. Vorzeichen beim Ableiten"></label><label class="field"><span>Fach</span><select id="eSubject">${state.subjects.map(s=>`<option value="${s.id}" ${x.subjectId===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}</select></label><label class="field"><span>Fehlertyp</span><select id="eCategory">${["Verständnisfehler","Flüchtigkeitsfehler","Zeitproblem","Formel vergessen","Aufgabe falsch gelesen","Argumentation unvollständig","Grammatikfehler"].map(c=>`<option ${x.category===c?"selected":""}>${c}</option>`).join("")}</select></label><label class="field full"><span>Meine falsche Lösung / Denkweise</span><textarea id="eWrong">${esc(x.wrong||"")}</textarea></label><label class="field full"><span>Richtige Lösung</span><textarea id="eCorrect">${esc(x.correct||"")}</textarea></label><label class="field full"><span>Warum ist der Fehler passiert?</span><textarea id="eCause">${esc(x.cause||"")}</textarea></label></div><div class="chips" style="margin-top:15px">${x.id?`<button class="btn btn-danger" data-action="delete-error" data-id="${x.id}">Löschen</button>`:""}<button class="btn btn-primary" data-action="save-error" data-id="${x.id||""}">Speichern</button></div>`}
+
   function settingsPage(){
-    return `<div class="page">
-      ${header("Einstellungen","Profil, Darstellung, Datenschutz, Sicherung und App-Verhalten.")}
+    return `<div class="page">${header("Einstellungen","Profil, Darstellung, IndexedDB, automatische Speicherstände und Datenkontrolle.")}
       <div class="grid-2">
-        <section class="card">
-          <div class="section-title"><h2>Profil</h2></div>
-          <div class="form-grid">
-            <label class="field"><span>Name</span><input id="settingName" value="${esc(state.profile.name)}"></label>
-            <label class="field"><span>Jahrgang</span><input id="settingGrade" value="${esc(state.profile.grade)}"></label>
-            <label class="field"><span>Zielnotenschnitt</span><input id="settingTarget" type="number" min="1" max="6" step=".1" value="${state.profile.targetAverage}"></label>
-            <label class="field"><span>Tagesziel Minuten</span><input id="settingGoal" type="number" min="10" max="300" value="${state.settings.dailyGoal}"></label>
-          </div>
-          <button class="btn btn-primary" style="margin-top:14px" data-action="save-settings">Speichern</button>
-        </section>
-        <section class="card">
-          <div class="section-title"><h2>Darstellung</h2></div>
-          <div class="switch-row"><div><strong>Animationen</strong><div class="muted">Übergänge und Effekte</div></div><button class="switch ${state.settings.animations?"on":""}" data-action="toggle-setting" data-key="animations"></button></div>
-          <div class="switch-row"><div><strong>Kompakte Ansicht</strong><div class="muted">Mehr Inhalt auf einmal</div></div><button class="switch ${state.settings.compact?"on":""}" data-action="toggle-setting" data-key="compact"></button></div>
-          <div class="switch-row"><div><strong>Installierte PWA</strong><div class="muted">${window.matchMedia("(display-mode: standalone)").matches?"Als App geöffnet":"Im Browser geöffnet"}</div></div><span class="badge green">Bereit</span></div>
-        </section>
-        <section class="card">
-          <div class="section-title"><h2>Daten & Backups</h2></div>
-          <p class="muted">Automatische lokale Speicherung. Exportiere regelmäßig eine Sicherung in iCloud Drive.</p>
-          <div class="chips"><button class="btn btn-secondary" data-action="export-data">↓ Export</button><button class="btn btn-secondary" data-action="import-data">↑ Import</button><input id="importFile" type="file" accept=".json,application/json" hidden><button class="btn btn-danger" data-action="reset-data">Alles zurücksetzen</button></div>
-        </section>
-        <section class="card">
-          <div class="section-title"><h2>Über EF COMMAND</h2></div>
-          <div class="stack"><div class="task-row"><div class="row-main"><strong>Version</strong><small>${VERSION} · flache PWA ohne Ordner</small></div></div><div class="task-row"><div class="row-main"><strong>Speicherort</strong><small>Dieses Gerät / diese Web-App</small></div></div><div class="task-row"><div class="row-main"><strong>Lernhilfe</strong><small>Wikimedia-Quellen, kein privater API-Schlüssel</small></div></div></div>
-        </section>
+        <section class="card"><div class="section-title"><h2>Profil</h2></div><div class="form-grid"><label class="field"><span>Name</span><input id="settingName" value="${esc(state.profile.name)}"></label><label class="field"><span>Jahrgang</span><input id="settingGrade" value="${esc(state.profile.grade)}"></label><label class="field"><span>Zielnotenschnitt</span><input id="settingTarget" type="number" min="1" max="6" step=".1" value="${state.profile.targetAverage}"></label><label class="field"><span>Tagesziel Minuten</span><input id="settingGoal" type="number" min="10" max="300" value="${state.settings.dailyGoal}"></label></div><button class="btn btn-primary" style="margin-top:14px" data-action="save-settings">Speichern</button></section>
+        <section class="card"><div class="section-title"><h2>Darstellung</h2></div><div class="switch-row"><div><strong>Animationen</strong><div class="muted">Übergänge und Effekte</div></div><button class="switch ${state.settings.animations?"on":""}" data-action="toggle-setting" data-key="animations"></button></div><div class="switch-row"><div><strong>Kompakte Ansicht</strong><div class="muted">Mehr Inhalt auf einmal</div></div><button class="switch ${state.settings.compact?"on":""}" data-action="toggle-setting" data-key="compact"></button></div><div class="switch-row"><div><strong>Tägliche Speicherstände</strong><div class="muted">Ein Snapshot pro Tag in IndexedDB</div></div><button class="switch ${state.settings.autoSnapshots!==false?"on":""}" data-action="toggle-setting" data-key="autoSnapshots"></button></div></section>
+        <section class="card"><div class="section-title"><div><h2>Backups & Wiederherstellung</h2><div class="muted">IndexedDB als Hauptspeicher plus JSON-Export.</div></div><span class="badge green">Offline-first</span></div><div class="chips"><button class="btn btn-secondary" data-action="create-snapshot">＋ Speicherstand</button><button class="btn btn-secondary" data-action="export-data">↓ Export</button><button class="btn btn-secondary" data-action="import-data">↑ Import</button><input id="importFile" type="file" accept=".json,application/json" hidden></div><div class="backup-list">${snapshotList.map(x=>`<div class="backup-row"><div class="row-main"><strong>${x.kind==="daily"?"Tagesbackup":"Manueller Speicherstand"}</strong><small>${new Date(x.createdAt).toLocaleString("de-DE")}</small></div><button class="small-btn" data-action="restore-snapshot" data-id="${x.id}">↺</button><button class="small-btn" data-action="delete-snapshot" data-id="${x.id}">×</button></div>`).join("")||`<div class="muted">Noch keine Speicherstände.</div>`}</div></section>
+        <section class="card"><div class="section-title"><h2>Systemstatus</h2></div><div class="stack"><div class="task-row"><div class="row-main"><strong>Version</strong><small>${VERSION} · flache PWA ohne Ordner</small></div></div><div class="task-row"><div class="row-main"><strong>Datenbank</strong><small>IndexedDB mit localStorage-Spiegel</small></div><span class="badge green">aktiv</span></div><div class="task-row"><div class="row-main"><strong>Offline-Modus</strong><small>Service Worker und Cache</small></div><span class="badge green">bereit</span></div></div><button class="btn btn-danger" style="margin-top:14px" data-action="reset-data">Alles zurücksetzen</button></section>
       </div>
     </div>`
   }
-
   function render(){
     renderNav();
     document.body.classList.toggle("reduce-motion",!state.settings.animations);
-    const content=page==="dashboard"?dashboard():page==="planner"?planner():page==="tasks"?tasksPage():page==="exams"?examsPage():page==="subjects"?subjectsPage():page==="grades"?gradesPage():page==="focus"?focusPage():page==="library"?libraryPage():page==="insights"?insightsPage():settingsPage();
-    document.getElementById("appMain").innerHTML=content;
+    const routes={dashboard,planner,tasks:tasksPage,exams:examsPage,subjects:subjectsPage,timetable:timetablePage,absences:absencesPage,errors:errorsPage,grades:gradesPage,focus:focusPage,library:libraryPage,insights:insightsPage,settings:settingsPage};
+    document.getElementById("appMain").innerHTML=(routes[page]||dashboard)();
     if(!state.profile.onboardingCompleted)showOnboarding();
   }
 
@@ -823,7 +854,7 @@
     mutate(s=>{s.sessions.push({id:uid(),date:todayKey(),minutes:used,title,taskId:focus.taskId,subjectId:sid,rating:4});if(focus.taskId){const t=s.tasks.find(x=>x.id===focus.taskId);if(t){t.progress=clamp((t.progress||0)+Math.round(used/(t.minutes||used)*100),0,100);t.status=t.progress>=100?"erledigt":"in-arbeit";if(t.status==="erledigt")t.completedAt=new Date().toISOString()}}updateStreak();return s},`${used} Lernminuten gespeichert`)
   }
 
-  document.addEventListener("click",e=>{
+  document.addEventListener("click",async e=>{
     const target=e.target.closest("[data-action],[data-page]");if(!target)return;
     const action=target.dataset.action,id=target.dataset.id;
     if(target.dataset.page){
@@ -832,7 +863,7 @@
     }
     if(action==="close-more")document.getElementById("moreSheet").classList.remove("show");
     if(action==="close-modal")closeModal();
-    if(action==="quick-add")showModal("Schnell hinzufügen",`<div class="grid-3"><button class="card" data-action="add-task"><div style="font-size:30px">✓</div><h3>Aufgabe</h3><div class="muted">Frist, Fach, Zeit</div></button><button class="card" data-action="add-exam"><div style="font-size:30px">📝</div><h3>Klausur</h3><div class="muted">Termin und Themen</div></button><button class="card" data-action="add-note"><div style="font-size:30px">📒</div><h3>Notiz</h3><div class="muted">Zusammenfassung</div></button></div>`);
+    if(action==="quick-add")showModal("Schnell hinzufügen",`<div class="grid-3"><button class="card" data-action="add-task"><div style="font-size:30px">✓</div><h3>Aufgabe</h3><div class="muted">Frist, Fach, Zeit</div></button><button class="card" data-action="add-exam"><div style="font-size:30px">📝</div><h3>Klausur</h3><div class="muted">Termin und Themen</div></button><button class="card" data-action="add-absence"><div style="font-size:30px">◷</div><h3>Fehlzeit</h3><div class="muted">Status und Nachweis</div></button><button class="card" data-action="add-error"><div style="font-size:30px">🧯</div><h3>Fehler</h3><div class="muted">Ursache und Lösung</div></button><button class="card" data-action="add-note"><div style="font-size:30px">📒</div><h3>Notiz</h3><div class="muted">Zusammenfassung</div></button></div>`);
     if(action==="add-task"){showModal("Neue Aufgabe",taskForm())}
     if(action==="edit-task"){const t=state.tasks.find(x=>x.id===id);if(t)showModal("Aufgabe bearbeiten",taskForm(t))}
     if(action==="save-task"){
@@ -891,11 +922,29 @@
     if(action==="calendar-next"){calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()+1,1);render()}
     if(action==="scroll-year")document.getElementById("yearPlanSection")?.scrollIntoView({behavior:"smooth"});
     if(action==="toggle-milestone")mutate(s=>{const x=s.yearPlan.find(y=>y.id===id);x.done=!x.done;return s});
-    if(action==="auto-plan"){
-      const planned=openTasks().slice(0,5);if(!planned.length)return toast("Keine offenen Aufgaben.","error");
-      toast(`Wochenplan mit ${planned.length} Prioritäten erstellt.`,"success")
-    }
-    if(action==="show-week-plan")toast("Die Wochenansicht wird aus deinen offenen Aufgaben gebildet.","success");
+    if(action==="auto-plan"){if(!openTasks().length)return toast("Keine offenen Aufgaben.","error");generateWeekPlan()}
+    if(action==="clear-week-plan"){mutate(s=>{s.weekPlan=[];return s},"Wochenplan geleert")}
+    if(action==="toggle-plan"){mutate(s=>{const x=s.weekPlan.find(y=>y.id===id);if(x)x.done=!x.done;return s})}
+    if(action==="scroll-week")document.getElementById("weekPlanSection")?.scrollIntoView({behavior:"smooth"});
+    if(action==="show-week-plan")document.getElementById("weekPlanSection")?.scrollIntoView({behavior:"smooth"});
+    if(action==="add-lesson")showModal("Unterrichtsstunde",lessonForm());
+    if(action==="add-lesson-slot")showModal("Unterrichtsstunde",lessonForm({day:Number(target.dataset.day),period:Number(target.dataset.period)}));
+    if(action==="edit-lesson"){const l=state.timetable.find(x=>x.id===id);if(l)showModal("Stunde bearbeiten",lessonForm(l))}
+    if(action==="save-lesson"){const item={day:Number(document.getElementById("lDay").value),period:Number(document.getElementById("lPeriod").value),subjectId:document.getElementById("lSubject").value,room:document.getElementById("lRoom").value,note:document.getElementById("lNote").value,type:"unterricht"};mutate(s=>{s.timetable=s.timetable.filter(x=>!(x.day===item.day&&x.period===item.period&&x.id!==id));if(id)Object.assign(s.timetable.find(x=>x.id===id),item);else s.timetable.push({id:uid(),...item});return s},"Stundenplan gespeichert");closeModal()}
+    if(action==="delete-lesson"){mutate(s=>{s.timetable=s.timetable.filter(x=>x.id!==id);return s},"Stunde gelöscht");closeModal()}
+    if(action==="add-absence")showModal("Fehlzeit eintragen",absenceForm());
+    if(action==="edit-absence"){const a=state.absences.find(x=>x.id===id);if(a)showModal("Fehlzeit bearbeiten",absenceForm(a))}
+    if(action==="save-absence"){const item={date:document.getElementById("aDate").value,subjectId:document.getElementById("aSubject").value||null,hours:Number(document.getElementById("aHours").value)||1,excused:document.getElementById("aExcused").value==="yes",proofSubmitted:document.getElementById("aProof").value==="yes",reason:document.getElementById("aReason").value};mutate(s=>{if(id)Object.assign(s.absences.find(x=>x.id===id),item);else s.absences.push({id:uid(),...item});return s},"Fehlzeit gespeichert");closeModal()}
+    if(action==="delete-absence"){mutate(s=>{s.absences=s.absences.filter(x=>x.id!==id);return s},"Fehlzeit gelöscht");closeModal()}
+    if(action==="add-error")showModal("Fehler erfassen",errorForm());
+    if(action==="edit-error"){const x=state.errors.find(y=>y.id===id);if(x)showModal("Fehler bearbeiten",errorForm(x))}
+    if(action==="save-error"){const item={title:document.getElementById("eTitle").value.trim(),subjectId:document.getElementById("eSubject").value,category:document.getElementById("eCategory").value,wrong:document.getElementById("eWrong").value,correct:document.getElementById("eCorrect").value,cause:document.getElementById("eCause").value};if(!item.title)return toast("Titel fehlt.","error");mutate(s=>{if(id)Object.assign(s.errors.find(x=>x.id===id),item);else s.errors.push({id:uid(),...item,createdAt:new Date().toISOString(),due:todayKey(),status:"offen",confidence:1});return s},"Fehler gespeichert");closeModal()}
+    if(action==="delete-error"){mutate(s=>{s.errors=s.errors.filter(x=>x.id!==id);return s},"Fehler gelöscht");closeModal()}
+    if(action==="review-error"){mutate(s=>{const x=s.errors.find(y=>y.id===id);if(x){x.confidence=(x.confidence||1)+1;const interval=x.confidence>=4?30:x.confidence===3?14:x.confidence===2?7:3;const d=new Date();d.setDate(d.getDate()+interval);x.due=todayKey(d);x.status=x.confidence>=4?"sicher":"lernen"}return s},"Fehler-Wiederholung gespeichert")}
+    if(action==="review-card")reviewFlashcard(id,target.dataset.rating);
+    if(action==="create-snapshot"){await createSnapshot("manual");render();toast("Speicherstand erstellt.","success")}
+    if(action==="restore-snapshot"){const snap=snapshotList.find(x=>x.id===id);if(snap&&confirm("Diesen Speicherstand wiederherstellen?")){state=normalizeState(structuredClone(snap.state));await save();render();toast("Speicherstand wiederhergestellt.","success")}}
+    if(action==="delete-snapshot"){await idbDelete("snapshots",id);await refreshSnapshots();render();toast("Speicherstand gelöscht.","success")}
     if(action==="save-settings"){mutate(s=>{s.profile.name=document.getElementById("settingName").value;s.profile.grade=document.getElementById("settingGrade").value;s.profile.targetAverage=Number(document.getElementById("settingTarget").value)||2.5;s.settings.dailyGoal=Number(document.getElementById("settingGoal").value)||75;return s},"Einstellungen gespeichert")}
     if(action==="toggle-setting"){mutate(s=>{s.settings[target.dataset.key]=!s.settings[target.dataset.key];return s})}
     if(action==="export-data"){const blob=new Blob([JSON.stringify({version:VERSION,exportedAt:new Date().toISOString(),data:state},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`ef-command-backup-${todayKey()}.json`;a.click();URL.revokeObjectURL(url);toast("Backup exportiert.","success")}
@@ -915,7 +964,7 @@
   });
 
   if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
-  render();
+  init();
 })();
 </script>
 </body>
