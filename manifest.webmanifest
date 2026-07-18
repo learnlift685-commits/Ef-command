@@ -1,7 +1,7 @@
 {
-  "name": "EF COMMAND Ultimate V4",
+  "name": "EF COMMAND Ultimate 4.1",
   "short_name": "EF COMMAND",
-  "description": "Offline-first Schul-Betriebssystem für die EF.",
+  "description": "Dein vollständiges EF-Schulsystem mit exaktem Stundenraster und frei verwaltbaren Fächern.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
