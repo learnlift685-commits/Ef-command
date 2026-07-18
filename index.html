@@ -1,5 +1,922 @@
-<!doctype html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#020617"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="EF COMMAND"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><title>EF COMMAND</title><style>
-:root{font-family:system-ui,-apple-system,sans-serif;color:#e5eefb;background:#020617}*{box-sizing:border-box}body{margin:0;background:#020617}button,input,select{font:inherit}.app{min-height:100vh;padding:24px 16px 100px;max-width:900px;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}.brand{font-weight:800}.nav{display:flex;gap:8px;flex-wrap:wrap}.nav button,.btn{border:0;border-radius:12px;padding:10px 14px;color:white;background:#17233a}.nav button.active,.primary{background:#2563eb}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.card{background:#0a1326;border:1px solid #1a2740;border-radius:18px;padding:18px}.metric span{display:block;color:#8a96aa;font-size:13px}.metric strong{display:block;font-size:26px;margin-top:6px}.form{display:grid;grid-template-columns:2fr 1fr 100px auto;gap:10px;align-items:end}.form label{font-size:13px;color:#a7b2c7}.form input,.form select{width:100%;margin-top:6px;min-height:44px;border:1px solid #2a3852;background:#0d172b;color:white;border-radius:12px;padding:0 12px}.stack{display:grid;gap:10px}.row{display:flex;gap:10px;align-items:center;background:#0a1326;border:1px solid #1a2740;border-radius:14px;padding:12px}.row main{flex:1;min-width:0}.row small{display:block;color:#8290a8;margin-top:3px}.icon{border:0;background:transparent;color:#94a3b8;font-size:18px}.done{text-decoration:line-through;color:#6f7c92}.bottom{position:fixed;left:0;right:0;bottom:0;display:none;justify-content:space-around;padding:8px 4px max(8px,env(safe-area-inset-bottom));background:#050c1af2;border-top:1px solid #1a2740}.bottom button{border:0;background:transparent;color:#8d9ab0;font-size:11px}.timer{position:fixed;inset:0;background:#020617f9;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;z-index:20}.timer.show{display:flex}.time{font-size:72px;font-weight:800}.timer-actions{display:flex;gap:12px;margin-top:20px}@media(max-width:750px){.desktop-nav{display:none}.bottom{display:flex}.grid{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:1fr}.app{padding-top:max(22px,env(safe-area-inset-top))}}
-</style></head><body><div class="app"><div class="top"><div><div class="brand">EF COMMAND</div><small id="nameLabel">Schüler</small></div><div class="nav desktop-nav" id="nav"></div></div><div id="content"></div></div><div class="bottom" id="bottom"></div><div class="timer" id="timer"><button class="icon" id="closeTimer" style="position:absolute;top:20px;right:20px;font-size:30px">×</button><small id="timerSubject"></small><h2 id="timerTitle"></h2><div class="time" id="timerValue">25:00</div><div class="timer-actions"><button class="btn" id="pauseTimer">Pause</button><button class="btn primary" id="finishTimer">Beenden</button></div></div><script>
-const K='ef-command-flat-v1',uid=()=>crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random();const def={profile:{name:'Schercko',targetAverage:2.5},subjects:[{id:uid(),name:'Mathematik'},{id:uid(),name:'Deutsch'},{id:uid(),name:'Englisch'},{id:uid(),name:'Geschichte'}],tasks:[],exams:[],grades:[],studyMinutes:0};let s=(()=>{try{return {...def,...JSON.parse(localStorage.getItem(K)||'{}')}}catch{return structuredClone(def)}})(),page='heute',active=null,sec=0,total=0,run=false,iv=null;const pages=[['heute','Heute'],['aufgaben','Aufgaben'],['klausuren','Klausuren'],['faecher','Fächer'],['noten','Noten'],['planung','Planung'],['einstellungen','Einstellungen']];const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));function save(){localStorage.setItem(K,JSON.stringify(s))}function set(fn){s=fn(structuredClone(s));save();render()}function nav(){for(const id of ['nav','bottom']){const el=document.getElementById(id);el.innerHTML='';pages.forEach(([k,l],i)=>{if(id==='bottom'&&i>4)return;const b=document.createElement('button');b.textContent=l;b.className=page===k?'active':'';b.onclick=()=>{page=k;render()};el.appendChild(b)})}}function title(a,b){return `<h1>${a}</h1><p style="color:#8793aa">${b}</p>`}function today(){const o=s.tasks.filter(t=>!t.done),d=s.tasks.filter(t=>t.done),n=o[0];return title('Hallo, '+esc(s.profile.name),'Dein Lern-Kommandozentrum')+`<div class="grid">${[['Offene Aufgaben',o.length],['Erledigt',d.length],['Lernzeit',s.studyMinutes+' Min.'],['Ziel-Ø',Number(s.profile.targetAverage).toFixed(1)]].map(x=>`<div class="card metric"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('')}</div><div class="card">${n?`<small style="color:#60a5fa">NÄCHSTE AKTION</small><h2>${esc(n.title)}</h2><p>${esc(n.subject)} · ${n.minutes} Min.</p><button class="btn primary" id="startNext">Jetzt starten</button>`:`<h2>Alles erledigt</h2><p>Lege eine Aufgabe an.</p><button class="btn primary" id="goTasks">Aufgabe hinzufügen</button>`}</div>`}function tasks(){return title('Aufgaben','Erstellen, starten und abhaken')+`<div class="card form"><label>Aufgabe<input id="taskTitle"></label><label>Fach<select id="taskSubject">${s.subjects.map(x=>`<option>${esc(x.name)}</option>`).join('')}</select></label><label>Minuten<input id="taskMinutes" type="number" value="25" min="5"></label><button class="btn primary" id="addTask">Hinzufügen</button></div><div class="stack">${s.tasks.map(t=>`<div class="row"><button class="icon toggle" data-id="${t.id}">${t.done?'✓':'○'}</button><main><strong class="${t.done?'done':''}">${esc(t.title)}</strong><small>${esc(t.subject)} · ${t.minutes} Min.</small></main>${!t.done?`<button class="icon start" data-id="${t.id}">▶</button>`:''}<button class="icon del" data-id="${t.id}">🗑</button></div>`).join('')}</div>`}function exams(){return title('Klausuren','Termine verwalten')+`<div class="card form"><label>Titel<input id="examTitle"></label><label>Datum<input id="examDate" type="date"></label><button class="btn primary" id="addExam">Hinzufügen</button></div><div class="stack">${s.exams.map(e=>`<div class="row"><main><strong>${esc(e.title)}</strong><small>${e.date}</small></main><button class="icon delexam" data-id="${e.id}">🗑</button></div>`).join('')}</div>`}function subjects(){return title('Fächer','Verwalten')+`<div class="card form"><label>Fach<input id="subjectName"></label><button class="btn primary" id="addSubject">Hinzufügen</button></div><div class="grid">${s.subjects.map(x=>`<div class="card"><strong>${esc(x.name)}</strong><button class="icon delsub" data-id="${x.id}" style="float:right">🗑</button></div>`).join('')}</div>`}function grades(){return title('Noten','Durchschnitt pro Fach')+`<div class="card form"><label>Fach<select id="gradeSubject">${s.subjects.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></label><label>Note<input id="gradeValue" type="number" min="1" max="6" value="3"></label><button class="btn primary" id="addGrade">Speichern</button></div><div class="grid">${s.subjects.map(x=>{const g=s.grades.filter(y=>y.subjectId===x.id),a=g.length?g.reduce((q,y)=>q+y.grade,0)/g.length:null;return `<div class="card metric"><span>${esc(x.name)}</span><strong>${a?a.toFixed(2).replace('.',','):'–'}</strong><small>${g.length} Noten</small></div>`}).join('')}</div>`}function planning(){const o=s.tasks.filter(t=>!t.done);return title('Planung','Offene Aufgaben in Reihenfolge')+`<div class="stack">${o.map((t,i)=>`<div class="row"><strong style="color:#60a5fa">${16+Math.floor(i/2)}:${i%2?'30':'00'}</strong><main><strong>${esc(t.title)}</strong><small>${esc(t.subject)} · ${t.minutes} Min.</small></main></div>`).join('')}</div>`}function settings(){return title('Einstellungen','Profil und Daten')+`<div class="card form"><label>Name<input id="profileName" value="${esc(s.profile.name)}"></label><label>Ziel-Ø<input id="targetAverage" type="number" step="0.1" value="${s.profile.targetAverage}"></label><button class="btn" id="exportData">Export</button><button class="btn" id="resetData" style="background:#b91c1c">Reset</button></div>`}function render(){nav();document.getElementById('nameLabel').textContent=s.profile.name||'Schüler';document.getElementById('content').innerHTML=page==='heute'?today():page==='aufgaben'?tasks():page==='klausuren'?exams():page==='faecher'?subjects():page==='noten'?grades():page==='planung'?planning():settings();bind()}function bind(){document.getElementById('goTasks')?.addEventListener('click',()=>{page='aufgaben';render()});document.getElementById('startNext')?.addEventListener('click',()=>{const t=s.tasks.find(x=>!x.done);if(t)startTimer(t)});document.getElementById('addTask')?.addEventListener('click',()=>{const title=document.getElementById('taskTitle').value.trim();if(!title)return;const subject=document.getElementById('taskSubject').value,minutes=+document.getElementById('taskMinutes').value||25;set(x=>{x.tasks.push({id:uid(),title,subject,minutes,done:false});return x})});document.querySelectorAll('.toggle').forEach(b=>b.onclick=()=>set(x=>{const t=x.tasks.find(y=>y.id===b.dataset.id);if(t)t.done=!t.done;return x}));document.querySelectorAll('.start').forEach(b=>b.onclick=()=>{const t=s.tasks.find(y=>y.id===b.dataset.id);if(t)startTimer(t)});document.querySelectorAll('.del').forEach(b=>b.onclick=()=>set(x=>{x.tasks=x.tasks.filter(y=>y.id!==b.dataset.id);return x}));document.getElementById('addExam')?.addEventListener('click',()=>{const title=document.getElementById('examTitle').value.trim(),date=document.getElementById('examDate').value;if(!title||!date)return;set(x=>{x.exams.push({id:uid(),title,date});return x})});document.querySelectorAll('.delexam').forEach(b=>b.onclick=()=>set(x=>{x.exams=x.exams.filter(y=>y.id!==b.dataset.id);return x}));document.getElementById('addSubject')?.addEventListener('click',()=>{const name=document.getElementById('subjectName').value.trim();if(!name)return;set(x=>{x.subjects.push({id:uid(),name});return x})});document.querySelectorAll('.delsub').forEach(b=>b.onclick=()=>set(x=>{x.subjects=x.subjects.filter(y=>y.id!==b.dataset.id);return x}));document.getElementById('addGrade')?.addEventListener('click',()=>{const subjectId=document.getElementById('gradeSubject').value,grade=+document.getElementById('gradeValue').value;if(grade<1||grade>6)return;set(x=>{x.grades.push({id:uid(),subjectId,grade});return x})});document.getElementById('profileName')?.addEventListener('change',e=>set(x=>{x.profile.name=e.target.value;return x}));document.getElementById('targetAverage')?.addEventListener('change',e=>set(x=>{x.profile.targetAverage=+e.target.value||2.5;return x}));document.getElementById('exportData')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({version:'1.0',data:s},null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='ef-command-backup.json';a.click();URL.revokeObjectURL(u)});document.getElementById('resetData')?.addEventListener('click',()=>{if(confirm('Alles löschen?')){s=structuredClone(def);save();render()}})}function startTimer(t){active=t;total=(t.minutes||25)*60;sec=total;run=true;document.getElementById('timerSubject').textContent=t.subject;document.getElementById('timerTitle').textContent=t.title;document.getElementById('timer').classList.add('show');tick();clearInterval(iv);iv=setInterval(()=>{if(run&&sec>0){sec--;tick()}},1000)}function tick(){document.getElementById('timerValue').textContent=String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');document.getElementById('pauseTimer').textContent=run?'Pause':'Weiter'}document.getElementById('pauseTimer').onclick=()=>{run=!run;tick()};document.getElementById('closeTimer').onclick=()=>{clearInterval(iv);document.getElementById('timer').classList.remove('show')};document.getElementById('finishTimer').onclick=()=>{const used=Math.max(1,Math.round((total-sec)/60));set(x=>{x.studyMinutes+=used;const t=x.tasks.find(y=>y.id===active.id);if(t)t.done=true;return x});clearInterval(iv);document.getElementById('timer').classList.remove('show')};if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js'));render();
-</script></body></html>
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07101f" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="EF COMMAND" />
+  <meta name="description" content="Dein vollständiges Lern-Kommandozentrum für die EF." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <title>EF COMMAND Ultimate</title>
+  <style>
+    :root{
+      --bg:#050a14;--bg2:#091120;--panel:rgba(12,22,40,.82);--panel2:#101c30;
+      --border:rgba(148,163,184,.15);--text:#f4f7fb;--muted:#93a4bb;--faint:#64748b;
+      --accent:#5b8cff;--accent2:#8b5cf6;--green:#34d399;--yellow:#fbbf24;--red:#fb7185;
+      --shadow:0 22px 70px rgba(0,0,0,.36);--radius:22px;
+    }
+    *{box-sizing:border-box}
+    html{background:var(--bg);scroll-behavior:smooth}
+    body{
+      margin:0;min-width:320px;min-height:100vh;color:var(--text);
+      font-family:Inter,Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:
+        radial-gradient(circle at 90% -5%,rgba(91,140,255,.20),transparent 34%),
+        radial-gradient(circle at 5% 40%,rgba(139,92,246,.12),transparent 30%),
+        linear-gradient(180deg,#060b16 0%,#050a14 100%);
+      -webkit-tap-highlight-color:transparent;
+    }
+    body.reduce-motion *,body.reduce-motion *::before,body.reduce-motion *::after{
+      animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important
+    }
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    a{color:inherit}
+    .app-shell{min-height:100vh;display:flex}
+    .sidebar{
+      width:268px;position:sticky;top:0;height:100vh;flex:none;padding:18px 14px;
+      border-right:1px solid var(--border);background:rgba(5,11,22,.82);backdrop-filter:blur(24px);
+      display:flex;flex-direction:column;z-index:30;
+    }
+    .brand{display:flex;align-items:center;gap:12px;padding:8px 8px 21px}
+    .brand-logo{
+      width:44px;height:44px;border-radius:15px;display:grid;place-items:center;font-weight:900;
+      background:linear-gradient(145deg,var(--accent),var(--accent2));box-shadow:0 12px 32px rgba(91,140,255,.28)
+    }
+    .brand strong,.brand small{display:block}.brand strong{letter-spacing:.03em}.brand small{color:var(--muted);margin-top:3px}
+    .nav-section-label{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--faint);padding:10px 12px 7px}
+    .side-nav{display:grid;gap:5px}
+    .nav-btn{
+      border:1px solid transparent;background:transparent;color:var(--muted);padding:11px 12px;border-radius:14px;
+      display:flex;align-items:center;gap:11px;text-align:left;min-height:45px;transition:.22s ease
+    }
+    .nav-btn:hover{background:rgba(148,163,184,.08);color:var(--text);transform:translateX(2px)}
+    .nav-btn.active{
+      color:white;border-color:rgba(91,140,255,.25);
+      background:linear-gradient(135deg,rgba(91,140,255,.25),rgba(139,92,246,.12));
+      box-shadow:inset 3px 0 0 var(--accent)
+    }
+    .nav-icon{width:24px;text-align:center;font-size:17px}
+    .sidebar-footer{margin-top:auto;border-top:1px solid var(--border);padding:14px 8px 4px;color:var(--muted);font-size:12px}
+    .sync-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green);margin-right:7px}
+    .mobile-top{
+      display:none;position:fixed;top:0;left:0;right:0;z-index:40;align-items:center;justify-content:space-between;
+      min-height:62px;padding:calc(9px + env(safe-area-inset-top)) 14px 9px;
+      background:rgba(5,10,20,.82);border-bottom:1px solid var(--border);backdrop-filter:blur(22px)
+    }
+    .mobile-title{display:flex;align-items:center;gap:10px;font-weight:800}
+    .mini-logo{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(145deg,var(--accent),var(--accent2));font-size:12px}
+    .top-actions{display:flex;gap:8px}
+    .icon-button{
+      width:42px;height:42px;border-radius:13px;border:1px solid var(--border);background:rgba(148,163,184,.07);
+      color:var(--text);display:grid;place-items:center;transition:.2s
+    }
+    .icon-button:hover{transform:translateY(-2px);background:rgba(91,140,255,.16)}
+    main{flex:1;min-width:0;padding:30px 34px 80px}
+    .page{max-width:1180px;margin:0 auto;animation:pageIn .32s ease both}
+    @keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    .page-header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px}
+    .page-header h1{font-size:clamp(26px,4vw,38px);letter-spacing:-.035em;margin:0}
+    .page-header p{color:var(--muted);margin:7px 0 0}
+    .header-actions{display:flex;gap:9px;flex-wrap:wrap}
+    .btn{
+      border:0;border-radius:14px;min-height:44px;padding:10px 16px;display:inline-flex;align-items:center;justify-content:center;
+      gap:8px;font-weight:750;color:white;transition:.2s ease;white-space:nowrap
+    }
+    .btn:hover{transform:translateY(-2px);filter:brightness(1.07)}
+    .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 12px 28px rgba(91,140,255,.22)}
+    .btn-secondary{background:#17243a;border:1px solid var(--border)}
+    .btn-ghost{background:rgba(148,163,184,.07);border:1px solid var(--border);color:var(--muted)}
+    .btn-danger{background:rgba(251,113,133,.14);border:1px solid rgba(251,113,133,.28);color:#fecdd3}
+    .card{
+      border:1px solid var(--border);background:linear-gradient(145deg,rgba(15,26,46,.88),rgba(8,16,31,.88));
+      border-radius:var(--radius);padding:20px;box-shadow:0 8px 30px rgba(0,0,0,.13);position:relative;overflow:hidden
+    }
+    .card::after{
+      content:"";position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(120deg,rgba(255,255,255,.025),transparent 28%)
+    }
+    .hero{
+      min-height:260px;padding:26px;display:grid;grid-template-columns:1.35fr .65fr;gap:20px;
+      background:
+        radial-gradient(circle at 82% 24%,rgba(91,140,255,.28),transparent 27%),
+        linear-gradient(135deg,rgba(20,39,71,.94),rgba(9,17,32,.94));
+    }
+    .hero-copy{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:center}
+    .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#9db9ff;font-weight:850}
+    .hero h2{font-size:clamp(26px,4vw,45px);line-height:1.05;letter-spacing:-.045em;margin:12px 0}
+    .hero p{color:#b0bfd3;max-width:670px;line-height:1.55}
+    .hero-art{position:relative;display:grid;place-items:center;min-height:200px}
+    .orbit{width:170px;height:170px;border:1px solid rgba(148,163,184,.19);border-radius:50%;position:relative;animation:spin 18s linear infinite}
+    .orbit::before,.orbit::after{content:"";position:absolute;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 0 30px rgba(91,140,255,.5)}
+    .orbit::before{width:26px;height:26px;top:10px;left:22px}.orbit::after{width:18px;height:18px;bottom:20px;right:10px}
+    .core{position:absolute;width:96px;height:96px;border-radius:30px;display:grid;place-items:center;font-size:42px;background:rgba(7,16,31,.76);border:1px solid rgba(255,255,255,.12);box-shadow:var(--shadow);animation:float 4s ease-in-out infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}@keyframes float{50%{transform:translateY(-8px) rotate(2deg)}}
+    .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:16px 0}
+    .metric-card{
+      padding:17px;border-radius:18px;border:1px solid var(--border);background:rgba(13,24,43,.76);transition:.2s
+    }
+    .metric-card:hover{transform:translateY(-3px);border-color:rgba(91,140,255,.3)}
+    .metric-card span{color:var(--muted);font-size:12px}.metric-card strong{display:block;font-size:28px;margin-top:7px;letter-spacing:-.03em}
+    .metric-card small{color:var(--faint)}
+    .grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+    .stack{display:grid;gap:11px}.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .section-title h2,.section-title h3{margin:0}.muted{color:var(--muted)}.faint{color:var(--faint)}
+    .progress{height:9px;border-radius:99px;background:rgba(148,163,184,.12);overflow:hidden}
+    .progress > span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .5s cubic-bezier(.2,.8,.2,1)}
+    .task-row,.exam-row,.session-row{
+      border:1px solid var(--border);background:rgba(11,20,36,.72);border-radius:17px;padding:13px;
+      display:flex;align-items:center;gap:12px;transition:.2s
+    }
+    .task-row:hover,.exam-row:hover,.session-row:hover{background:rgba(18,31,52,.84);transform:translateY(-1px)}
+    .check{
+      width:34px;height:34px;border-radius:11px;border:1px solid var(--border);background:rgba(148,163,184,.05);color:var(--muted);display:grid;place-items:center;flex:none
+    }
+    .check.done{background:rgba(52,211,153,.14);border-color:rgba(52,211,153,.3);color:var(--green)}
+    .row-main{flex:1;min-width:0}.row-main strong,.row-main small{display:block}.row-main strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.row-main small{color:var(--muted);margin-top:4px}
+    .done-text{text-decoration:line-through;color:var(--faint)}
+    .badge{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:99px;font-size:11px;font-weight:750;border:1px solid var(--border);color:var(--muted);background:rgba(148,163,184,.06)}
+    .badge.blue{color:#b8caff;border-color:rgba(91,140,255,.3);background:rgba(91,140,255,.11)}
+    .badge.green{color:#a7f3d0;border-color:rgba(52,211,153,.28);background:rgba(52,211,153,.10)}
+    .badge.yellow{color:#fde68a;border-color:rgba(251,191,36,.28);background:rgba(251,191,36,.10)}
+    .badge.red{color:#fecdd3;border-color:rgba(251,113,133,.28);background:rgba(251,113,133,.10)}
+    .chips{display:flex;gap:7px;flex-wrap:wrap}.row-actions{display:flex;gap:5px}
+    .small-btn{width:38px;height:38px;border:1px solid var(--border);border-radius:12px;background:rgba(148,163,184,.06);color:var(--muted);display:grid;place-items:center}
+    .small-btn:hover{color:white;background:rgba(91,140,255,.15)}
+    .tabs{display:flex;gap:7px;overflow:auto;padding-bottom:3px;margin-bottom:15px;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+    .tab{border:1px solid var(--border);background:rgba(148,163,184,.05);color:var(--muted);padding:9px 13px;border-radius:12px;white-space:nowrap}
+    .tab.active{color:white;background:rgba(91,140,255,.18);border-color:rgba(91,140,255,.32)}
+    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+    .field{display:block}.field.full{grid-column:1/-1}.field span{display:block;color:#b9c5d7;font-size:12px;font-weight:700;margin-bottom:7px}
+    input,select,textarea{
+      width:100%;border:1px solid var(--border);background:#0b1628;color:var(--text);border-radius:14px;
+      padding:11px 12px;min-height:44px;outline:none;transition:.18s
+    }
+    textarea{min-height:92px;resize:vertical}
+    input:focus,select:focus,textarea:focus{border-color:rgba(91,140,255,.65);box-shadow:0 0 0 3px rgba(91,140,255,.12)}
+    input[type="range"]{padding:0;min-height:auto;accent-color:var(--accent)}
+    .calendar-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
+    .weekday{text-align:center;font-size:11px;color:var(--faint);padding:5px}
+    .day{
+      min-height:92px;border:1px solid var(--border);border-radius:14px;background:rgba(10,19,34,.62);padding:8px;transition:.2s
+    }
+    .day:hover{border-color:rgba(91,140,255,.35)}.day.outside{opacity:.34}.day.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px rgba(91,140,255,.3)}
+    .day-number{font-size:12px;font-weight:800}.event-dot{height:5px;border-radius:99px;background:var(--accent);margin-top:6px}.event-dot.exam{background:var(--red)}.event-dot.session{background:var(--green)}
+    .subject-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+    .subject-card{min-height:190px;display:flex;flex-direction:column;gap:10px;transition:.2s}
+    .subject-card:hover{transform:translateY(-4px);border-color:rgba(91,140,255,.32)}
+    .subject-top{display:flex;align-items:center;justify-content:space-between}.subject-emoji{font-size:30px}.subject-card h3{margin:2px 0;font-size:20px}
+    .grade-big{font-size:36px;font-weight:900;letter-spacing:-.04em}
+    .chart-bars{display:flex;align-items:flex-end;gap:8px;height:160px;padding-top:10px}
+    .bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end}
+    .bar{width:100%;max-width:42px;border-radius:10px 10px 4px 4px;background:linear-gradient(180deg,var(--accent),var(--accent2));min-height:4px;animation:grow .6s ease both}
+    @keyframes grow{from{height:0!important}}.bar-label{font-size:10px;color:var(--faint)}
+    .mastery-row{display:grid;grid-template-columns:1.2fr 1fr 58px 36px;align-items:center;gap:10px}
+    .flashcard{
+      min-height:210px;display:grid;place-items:center;text-align:center;padding:25px;cursor:pointer;perspective:900px
+    }
+    .flashcard-inner{width:100%;min-height:185px;display:grid;place-items:center;border-radius:18px;background:rgba(91,140,255,.08);border:1px solid rgba(91,140,255,.2);transition:.35s;transform-style:preserve-3d;padding:24px}
+    .flashcard.flipped .flashcard-inner{transform:rotateY(180deg)}.flash-front,.flash-back{grid-area:1/1;backface-visibility:hidden}.flash-back{transform:rotateY(180deg)}
+    .search-box{display:flex;gap:9px}.search-box input{flex:1}
+    .source-tabs{display:flex;gap:8px;margin:13px 0}.result-card{padding:17px;border:1px solid var(--border);border-radius:17px;background:rgba(10,19,34,.68)}
+    .result-card h3{margin:0 0 8px}.result-card p{color:#b3c0d2;line-height:1.6}.result-card a{color:#9db9ff}
+    .quick-guides{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.guide{border:1px solid var(--border);background:rgba(148,163,184,.05);border-radius:15px;padding:13px;cursor:pointer;transition:.2s}.guide:hover{transform:translateY(-2px);background:rgba(91,140,255,.12)}
+    .timeline{position:relative;padding-left:24px}.timeline::before{content:"";position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:rgba(148,163,184,.14)}
+    .timeline-item{position:relative;padding:0 0 18px}.timeline-item::before{content:"";position:absolute;left:-21px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(91,140,255,.12)}
+    .empty{border:1px dashed rgba(148,163,184,.22);border-radius:18px;padding:28px;text-align:center;color:var(--muted)}
+    .command-bar{
+      position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:25;display:flex;gap:8px;
+      background:rgba(8,16,30,.88);backdrop-filter:blur(18px);border:1px solid var(--border);border-radius:17px;padding:7px;box-shadow:var(--shadow)
+    }
+    .command-bar button{border:0;background:transparent;color:var(--muted);padding:9px 12px;border-radius:11px}.command-bar button:hover{background:rgba(91,140,255,.15);color:white}
+    .bottom-nav{display:none}
+    .more-sheet,.modal,.timer-overlay,.onboarding{
+      position:fixed;inset:0;z-index:100;background:rgba(2,6,15,.76);backdrop-filter:blur(16px);display:none;align-items:center;justify-content:center;padding:18px
+    }
+    .more-sheet.show,.modal.show,.timer-overlay.show,.onboarding.show{display:flex}
+    .sheet-panel,.modal-panel{
+      width:min(650px,100%);max-height:90vh;overflow:auto;background:#091426;border:1px solid var(--border);border-radius:26px;padding:22px;box-shadow:var(--shadow);animation:modalIn .24s ease both
+    }
+    @keyframes modalIn{from{opacity:0;transform:scale(.97) translateY(8px)}to{opacity:1;transform:none}}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.modal-head h2{margin:0}
+    .modal-close{width:40px;height:40px;border:1px solid var(--border);border-radius:12px;background:rgba(148,163,184,.06);color:white}
+    .mobile-more-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.mobile-more-grid button{min-height:70px;border:1px solid var(--border);background:rgba(148,163,184,.06);color:white;border-radius:16px;display:flex;align-items:center;gap:11px;padding:13px}
+    .timer-overlay{background:radial-gradient(circle at 50% 20%,rgba(91,140,255,.22),transparent 30%),rgba(2,6,15,.96);flex-direction:column;text-align:center}
+    .timer-ring{
+      width:min(310px,74vw);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;
+      background:conic-gradient(var(--accent) var(--timer-progress,0%),rgba(148,163,184,.1) 0)
+    }
+    .timer-ring::before{content:"";position:absolute;inset:13px;border-radius:50%;background:#07111f}
+    .timer-content{position:relative;z-index:2}.timer-value{font-size:clamp(52px,12vw,86px);font-weight:900;letter-spacing:-.05em;font-variant-numeric:tabular-nums}.timer-label{color:var(--muted)}
+    .timer-actions{display:flex;gap:12px;margin-top:24px}.timer-actions button{min-width:54px}
+    .toast-wrap{position:fixed;right:20px;bottom:20px;z-index:150;display:grid;gap:9px;width:min(380px,calc(100vw - 32px))}
+    .toast{border:1px solid var(--border);background:#101c30;border-radius:15px;padding:13px 15px;box-shadow:var(--shadow);animation:toastIn .25s ease}.toast.success{border-color:rgba(52,211,153,.32)}.toast.error{border-color:rgba(251,113,133,.32)}
+    @keyframes toastIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+    .switch-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;border-bottom:1px solid var(--border)}
+    .switch{position:relative;width:50px;height:28px;border:0;border-radius:99px;background:#25344b}.switch::after{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;border-radius:50%;background:white;transition:.2s}.switch.on{background:var(--accent)}.switch.on::after{left:25px}
+    .onboarding{display:flex;z-index:200}.onboarding:not(.show){display:none}.onboarding-card{width:min(760px,100%);background:#091426;border:1px solid var(--border);border-radius:28px;padding:25px;box-shadow:var(--shadow)}
+    .onboarding-steps{display:flex;gap:7px;margin-bottom:20px}.onboarding-steps span{height:6px;flex:1;border-radius:99px;background:#1a2940}.onboarding-steps span.active{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+    .preset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.preset{border:1px solid var(--border);background:rgba(148,163,184,.05);border-radius:16px;padding:14px;cursor:pointer}.preset.selected{border-color:var(--accent);background:rgba(91,140,255,.12)}
+    @media(max-width:1050px){.subject-grid{grid-template-columns:repeat(2,1fr)}.quick-guides{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:820px){
+      .sidebar{display:none}.mobile-top{display:flex}main{padding:calc(78px + env(safe-area-inset-top)) 14px calc(100px + env(safe-area-inset-bottom))}
+      .command-bar{display:none}.bottom-nav{
+        display:flex;position:fixed;left:0;right:0;bottom:0;z-index:45;justify-content:space-around;
+        padding:7px 4px max(8px,env(safe-area-inset-bottom));background:rgba(5,10,20,.91);border-top:1px solid var(--border);backdrop-filter:blur(22px)
+      }
+      .bottom-nav button{border:0;background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 8px;font-size:10px;min-width:52px;border-radius:11px}
+      .bottom-nav button.active{color:#9db9ff;background:rgba(91,140,255,.1)}
+      .hero{grid-template-columns:1fr}.hero-art{display:none}.metrics{grid-template-columns:repeat(2,1fr)}
+      .grid-2,.grid-3,.subject-grid{grid-template-columns:1fr}.page-header{align-items:flex-start;flex-direction:column}.header-actions{width:100%}.header-actions .btn{flex:1}
+      .form-grid{grid-template-columns:1fr}.calendar-grid{gap:4px}.day{min-height:62px;padding:5px}.mastery-row{grid-template-columns:1fr 1fr 45px 32px}
+    }
+    @media(max-width:480px){.metrics{grid-template-columns:1fr 1fr}.metric-card strong{font-size:23px}.quick-guides,.preset-grid{grid-template-columns:1fr}.search-box{flex-direction:column}.mobile-more-grid{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+  <div class="mobile-top">
+    <div class="mobile-title"><div class="mini-logo">EF</div><span id="mobilePageTitle">Heute</span></div>
+    <div class="top-actions">
+      <button class="icon-button" data-action="open-search" aria-label="Wissen suchen">⌕</button>
+      <button class="icon-button" data-action="quick-add" aria-label="Schnell hinzufügen">＋</button>
+    </div>
+  </div>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">EF</div>
+        <div><strong>EF COMMAND</strong><small id="brandSubtitle">Ultimate · EF NRW</small></div>
+      </div>
+      <div class="nav-section-label">Kommandozentrum</div>
+      <nav class="side-nav" id="primaryNav"></nav>
+      <div class="nav-section-label">Werkzeuge</div>
+      <nav class="side-nav" id="secondaryNav"></nav>
+      <div class="sidebar-footer"><span class="sync-dot"></span><span id="saveIndicator">Lokal gespeichert</span><br><span class="faint">Version 3.0 · PWA</span></div>
+    </aside>
+    <main id="appMain"></main>
+  </div>
+
+  <nav class="bottom-nav" id="bottomNav"></nav>
+
+  <div class="command-bar">
+    <button data-action="quick-add">＋ Schnell hinzufügen</button>
+    <button data-action="open-focus">◎ Fokus starten</button>
+    <button data-action="open-search">⌕ Wissen suchen</button>
+  </div>
+
+  <div class="more-sheet" id="moreSheet">
+    <div class="sheet-panel">
+      <div class="modal-head"><h2>Mehr Bereiche</h2><button class="modal-close" data-action="close-more">×</button></div>
+      <div class="mobile-more-grid" id="mobileMoreGrid"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-panel">
+      <div class="modal-head"><h2 id="modalTitle">Hinzufügen</h2><button class="modal-close" data-action="close-modal">×</button></div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <div class="timer-overlay" id="timerOverlay">
+    <button class="modal-close" style="position:absolute;top:max(18px,env(safe-area-inset-top));right:18px" data-action="close-timer">×</button>
+    <div class="eyebrow" id="timerSubject">Fokusmodus</div>
+    <h2 id="timerTaskTitle">Konzentriert lernen</h2>
+    <div class="timer-ring" id="timerRing">
+      <div class="timer-content">
+        <div class="timer-value" id="timerValue">25:00</div>
+        <div class="timer-label" id="timerStatus">Fokus läuft</div>
+      </div>
+    </div>
+    <div class="timer-actions">
+      <button class="btn btn-secondary" data-action="timer-pause" id="timerPause">⏸ Pause</button>
+      <button class="btn btn-primary" data-action="timer-finish">✓ Beenden</button>
+    </div>
+  </div>
+
+  <div class="onboarding" id="onboarding">
+    <div class="onboarding-card">
+      <div class="onboarding-steps"><span class="active"></span><span></span><span></span></div>
+      <div id="onboardingBody"></div>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const STORAGE_KEY = "ef-command-ultimate-v3";
+  const VERSION = "3.0.0";
+  const uid = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const todayKey = (d = new Date()) => {
+    const x = new Date(d); const y=x.getFullYear(),m=String(x.getMonth()+1).padStart(2,"0"),day=String(x.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
+  };
+  const dateDE = value => value ? new Date(value.includes("T") ? value : value+"T12:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}) : "–";
+  const clamp = (n,min,max) => Math.min(max,Math.max(min,n));
+  const esc = value => String(value ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const daysBetween = (future,base=new Date()) => Math.ceil((new Date(future+"T12:00:00")-new Date(todayKey(base)+"T12:00:00"))/86400000);
+
+  const SUBJECT_PRESETS = [
+    ["Mathematik","📐","#5b8cff"],["Deutsch","✍️","#34d399"],["Englisch","🌍","#fbbf24"],
+    ["Geschichte","🏛️","#fb7185"],["Biologie","🧬","#a78bfa"],["Informatik","💻","#22d3ee"],
+    ["Erdkunde","🗺️","#fb923c"],["Philosophie","🧠","#c084fc"],["Italienisch","🇮🇹","#4ade80"],
+    ["Sozialwissenschaften","⚖️","#f472b6"],["Sport","🏃","#38bdf8"],["Kunst","🎨","#f59e0b"]
+  ];
+
+  function freshState(){
+    const subjects = SUBJECT_PRESETS.slice(0,9).map(([name,emoji,color],i)=>({
+      id:uid(),name,emoji,color,target:i<3?3:2,priority:name==="Mathematik"||name==="Deutsch"?5:3,teacher:"",archived:false
+    }));
+    const sid = name => subjects.find(s=>s.name===name)?.id;
+    return {
+      profile:{name:"Schercko",state:"Nordrhein-Westfalen",grade:"EF",school:"Gymnasium",repeatEF:true,targetAverage:2.5,onboardingCompleted:false},
+      settings:{animations:true,compact:false,accent:"blue",dailyGoal:75,defaultFocus:25,defaultBreak:5},
+      subjects,
+      tasks:[
+        {id:uid(),title:"Quadratische Funktionen wiederholen",subjectId:sid("Mathematik"),due:todayKey(new Date(Date.now()+86400000)),minutes:40,priority:5,status:"offen",progress:0,notes:"Scheitelpunktform und Nullstellen",subtasks:["Grundlagen lesen","3 Aufgaben rechnen"],createdAt:new Date().toISOString()},
+        {id:uid(),title:"Textanalyse-Struktur üben",subjectId:sid("Deutsch"),due:todayKey(new Date(Date.now()+3*86400000)),minutes:35,priority:4,status:"offen",progress:0,notes:"Einleitung, Hauptteil, Schluss",subtasks:[],createdAt:new Date().toISOString()},
+        {id:uid(),title:"20 Englisch-Vokabeln wiederholen",subjectId:sid("Englisch"),due:todayKey(new Date(Date.now()+2*86400000)),minutes:20,priority:3,status:"offen",progress:0,notes:"",subtasks:[],createdAt:new Date().toISOString()}
+      ],
+      exams:[
+        {id:uid(),title:"Mathematik-Klausur",subjectId:sid("Mathematik"),date:todayKey(new Date(Date.now()+12*86400000)),target:3,confidence:2,topics:[
+          {id:uid(),title:"Scheitelpunktform",mastery:45},{id:uid(),title:"Nullstellen",mastery:55},{id:uid(),title:"Textaufgaben",mastery:25}
+        ]},
+        {id:uid(),title:"Deutsch-Klausur",subjectId:sid("Deutsch"),date:todayKey(new Date(Date.now()+21*86400000)),target:3,confidence:3,topics:[
+          {id:uid(),title:"Textanalyse",mastery:40},{id:uid(),title:"Zitate einbauen",mastery:50}
+        ]}
+      ],
+      grades:[],
+      sessions:[],
+      notes:[],
+      flashcards:[
+        {id:uid(),subjectId:sid("Mathematik"),front:"Wie lautet die Mitternachtsformel?",back:"x = (-b ± √(b² − 4ac)) / 2a"},
+        {id:uid(),subjectId:sid("Deutsch"),front:"Was gehört in die Einleitung einer Textanalyse?",back:"Autor, Titel, Textsorte, Erscheinungsjahr, Thema und Deutungshypothese."}
+      ],
+      yearPlan:[
+        {id:uid(),month:"August",title:"EF-Neustart & Grundlagen",done:false},
+        {id:uid(),month:"September",title:"Arbeitsroutinen stabilisieren",done:false},
+        {id:uid(),month:"Oktober",title:"Erste Klausurphase auswerten",done:false},
+        {id:uid(),month:"November",title:"Lücken schließen",done:false},
+        {id:uid(),month:"Dezember",title:"Halbjahresstand prüfen",done:false},
+        {id:uid(),month:"Januar",title:"Neue Zielnoten festlegen",done:false},
+        {id:uid(),month:"Februar",title:"2. Halbjahr stark starten",done:false},
+        {id:uid(),month:"März",title:"Klausurtechnik verbessern",done:false},
+        {id:uid(),month:"April",title:"Defizitfächer retten",done:false},
+        {id:uid(),month:"Mai",title:"Zentrale Klausuren vorbereiten",done:false},
+        {id:uid(),month:"Juni",title:"Versetzung absichern",done:false},
+        {id:uid(),month:"Juli",title:"Jahresrückblick & Archiv",done:false}
+      ],
+      streak:{current:0,best:0,lastStudyDate:null},
+      calendarMonth:todayKey().slice(0,7),
+      activity:[]
+    };
+  }
+
+  function loadState(){
+    try{
+      const raw=localStorage.getItem(STORAGE_KEY);
+      if(!raw)return freshState();
+      const parsed=JSON.parse(raw);
+      const fresh=freshState();
+      return {...fresh,...parsed,profile:{...fresh.profile,...parsed.profile},settings:{...fresh.settings,...parsed.settings}};
+    }catch{return freshState()}
+  }
+  let state=loadState();
+  let page="dashboard";
+  let taskView="liste";
+  let taskFilter="alle";
+  let librarySource="wikipedia";
+  let libraryResults=[];
+  let libraryLoading=false;
+  let calendarCursor=new Date(state.calendarMonth+"-01T12:00:00");
+  let focus={taskId:null,total:0,left:0,running:false,interval:null,startedAt:null};
+  let flashIndex=0;
+  let onboardingStep=0;
+  let selectedPreset="nrw";
+
+  const primaryPages=[
+    ["dashboard","Heute","⌂"],["planner","Planer","▦"],["tasks","Aufgaben","✓"],["exams","Klausuren","⚑"],["subjects","Fächer","◫"]
+  ];
+  const secondaryPages=[
+    ["grades","Noten","▥"],["focus","Fokus","◎"],["library","Lernhilfe","✦"],["insights","Fortschritt","↗"],["settings","Einstellungen","⚙"]
+  ];
+  const allPages=[...primaryPages,...secondaryPages];
+
+  function save(){
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+    const el=document.getElementById("saveIndicator");
+    if(el){el.textContent="Gespeichert · "+new Date().toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});}
+  }
+  function mutate(fn,message){
+    const copy=structuredClone(state);state=fn(copy)||copy;save();render();
+    if(message)toast(message,"success");
+  }
+  function subject(id){return state.subjects.find(s=>s.id===id)}
+  function openTasks(){return state.tasks.filter(t=>t.status!=="erledigt")}
+  function completedToday(){return state.tasks.filter(t=>t.status==="erledigt"&&t.completedAt?.slice(0,10)===todayKey()).length}
+  function minutesToday(){return state.sessions.filter(s=>s.date===todayKey()).reduce((a,s)=>a+(s.minutes||0),0)}
+  function priorityScore(t){
+    const due=t.due?daysBetween(t.due):30;let score=(t.priority||3)*2+(t.progress>0?2:0);
+    if(due<0)score+=20;if(due===0)score+=15;if(due===1)score+=10;if(due<=3)score+=5;
+    return score;
+  }
+  function nextAction(){return [...openTasks()].sort((a,b)=>priorityScore(b)-priorityScore(a))[0]||null}
+  function weightedAvg(subjectId){
+    const gs=state.grades.filter(g=>g.subjectId===subjectId);if(!gs.length)return null;
+    const w=gs.reduce((a,g)=>a+(g.weight||1),0);return gs.reduce((a,g)=>a+g.grade*(g.weight||1),0)/w;
+  }
+  function overallAvg(){
+    const avgs=state.subjects.map(s=>weightedAvg(s.id)).filter(v=>v!=null);return avgs.length?avgs.reduce((a,b)=>a+b,0)/avgs.length:null
+  }
+  function updateStreak(){
+    const today=todayKey();if(state.streak.lastStudyDate===today)return;
+    const yesterday=todayKey(new Date(Date.now()-86400000));
+    state.streak.current=state.streak.lastStudyDate===yesterday?state.streak.current+1:1;
+    state.streak.best=Math.max(state.streak.best,state.streak.current);state.streak.lastStudyDate=today;
+  }
+  function pageName(key){return allPages.find(p=>p[0]===key)?.[1]||"EF COMMAND"}
+
+  function renderNav(){
+    document.getElementById("primaryNav").innerHTML=primaryPages.map(p=>navButton(p)).join("");
+    document.getElementById("secondaryNav").innerHTML=secondaryPages.map(p=>navButton(p)).join("");
+    document.getElementById("bottomNav").innerHTML=[
+      ...primaryPages.slice(0,4),
+      ["more","Mehr","•••"]
+    ].map(p=>`<button class="${page===p[0]?"active":""}" data-page="${p[0]}"><span style="font-size:18px">${p[2]}</span><span>${p[1]}</span></button>`).join("");
+    document.getElementById("mobileMoreGrid").innerHTML=[...primaryPages.slice(4),...secondaryPages].map(p=>`
+      <button data-page="${p[0]}"><span style="font-size:24px">${p[2]}</span><span>${p[1]}</span></button>`).join("");
+    document.getElementById("mobilePageTitle").textContent=pageName(page);
+  }
+  function navButton([key,label,icon]){
+    return `<button class="nav-btn ${page===key?"active":""}" data-page="${key}"><span class="nav-icon">${icon}</span><span>${label}</span></button>`
+  }
+
+  function header(title,subtitle,actions=""){
+    return `<div class="page-header"><div><h1>${title}</h1><p>${subtitle}</p></div><div class="header-actions">${actions}</div></div>`
+  }
+  function metric(label,value,detail=""){
+    return `<div class="metric-card"><span>${label}</span><strong>${value}</strong>${detail?`<small>${detail}</small>`:""}</div>`
+  }
+  function progress(value){return `<div class="progress"><span style="width:${clamp(value,0,100)}%"></span></div>`}
+  function empty(icon,title,text){
+    return `<div class="empty"><div style="font-size:32px;margin-bottom:9px">${icon}</div><strong>${title}</strong><div class="muted" style="margin-top:5px">${text}</div></div>`
+  }
+
+  function dashboard(){
+    const next=nextAction();const mins=minutesToday();const goal=state.settings.dailyGoal;
+    const upcoming=[...state.exams].filter(e=>daysBetween(e.date)>=0).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
+    const todayTasks=openTasks().sort((a,b)=>priorityScore(b)-priorityScore(a)).slice(0,5);
+    return `<div class="page">
+      ${header(`Hallo, ${esc(state.profile.name)} 👋`,"Dein System für ein kontrolliertes, erfolgreiches EF-Schuljahr.",
+        `<button class="btn btn-secondary" data-action="open-search">✦ Thema erklären</button><button class="btn btn-primary" data-action="quick-add">＋ Hinzufügen</button>`)}
+      <section class="card hero">
+        <div class="hero-copy">
+          <span class="eyebrow">Dein nächster Zug</span>
+          ${next?`<h2>${esc(next.title)}</h2><p>${esc(subject(next.subjectId)?.name||"Allgemein")} · ${next.minutes} Minuten · ${next.due?`fällig ${dateDE(next.due)}`:"ohne Frist"}</p>
+          <div class="chips" style="margin:6px 0 18px"><span class="badge blue">Priorität ${next.priority}/5</span>${daysBetween(next.due)<0?`<span class="badge red">Überfällig</span>`:""}<span class="badge">${next.progress||0}% erledigt</span></div>
+          <div><button class="btn btn-primary" data-action="start-task" data-id="${next.id}">▶ Fokus starten</button></div>`:
+          `<h2>Alles unter Kontrolle ✨</h2><p>Momentan gibt es keine offenen Aufgaben. Lege dein nächstes Ziel fest.</p><div><button class="btn btn-primary" data-action="quick-add">＋ Neue Aufgabe</button></div>`}
+        </div>
+        <div class="hero-art"><div class="orbit"></div><div class="core">🎯</div></div>
+      </section>
+      <div class="metrics">
+        ${metric("Lernzeit heute",`${mins} Min.`,`${Math.min(100,Math.round(mins/goal*100))}% vom Tagesziel`)}
+        ${metric("Offene Aufgaben",openTasks().length,`${completedToday()} heute erledigt`)}
+        ${metric("Lernserie",`${state.streak.current} Tage`,`Bestwert ${state.streak.best}`)}
+        ${metric("Aktueller Ø",overallAvg()?.toFixed(2).replace(".",",")||"–",`Ziel ${state.profile.targetAverage.toFixed(1)}`)}
+      </div>
+      <div class="grid-2">
+        <section class="card">
+          <div class="section-title"><h2>Heute wichtig</h2><button class="btn btn-ghost" data-page="tasks">Alle Aufgaben</button></div>
+          <div class="stack">${todayTasks.length?todayTasks.map(taskRow).join(""):empty("✅","Heute nichts Dringendes","Du kannst vorauslernen oder deine Lernhilfe nutzen.")}</div>
+        </section>
+        <section class="card">
+          <div class="section-title"><h2>Kommende Klausuren</h2><button class="btn btn-ghost" data-page="exams">Öffnen</button></div>
+          <div class="stack">${upcoming.length?upcoming.map(examRow).join(""):empty("📅","Keine Klausuren","Trage deinen nächsten Termin ein.")}</div>
+        </section>
+      </div>
+      <div class="grid-2" style="margin-top:16px">
+        <section class="card">
+          <div class="section-title"><h2>Tagesziel</h2><span class="badge blue">${mins}/${goal} Min.</span></div>
+          ${progress(mins/goal*100)}
+          <p class="muted">Ein realistisches Ziel schlägt einen perfekten Plan, den man nicht einhält.</p>
+        </section>
+        <section class="card">
+          <div class="section-title"><h2>EF-Risikocheck</h2><span class="badge ${openTasks().filter(t=>daysBetween(t.due)<0).length?"red":"green"}">${openTasks().filter(t=>daysBetween(t.due)<0).length?"Handlungsbedarf":"Stabil"}</span></div>
+          <div class="stack">
+            ${riskItems()}
+          </div>
+        </section>
+      </div>
+    </div>`
+  }
+  function riskItems(){
+    const items=[];const overdue=openTasks().filter(t=>t.due&&daysBetween(t.due)<0).length;if(overdue)items.push(`⚠️ ${overdue} überfällige Aufgabe(n)`);
+    const close=state.exams.filter(e=>daysBetween(e.date)>=0&&daysBetween(e.date)<=7);if(close.length)items.push(`📝 ${close.length} Klausur(en) in den nächsten 7 Tagen`);
+    const bad=state.subjects.filter(s=>{const a=weightedAvg(s.id);return a&&a>s.target+0.8});if(bad.length)items.push(`📉 ${bad.map(s=>s.name).join(", ")} liegt deutlich über der Zielnote`);
+    if(!items.length)items.push("✅ Keine akute Gefahr erkannt","🧠 Nutze freie Zeit für Wiederholung","📚 Halte Aufgaben und Klausuren aktuell");
+    return items.slice(0,3).map(x=>`<div class="task-row"><div class="row-main">${x}</div></div>`).join("")
+  }
+  function taskRow(t){
+    const s=subject(t.subjectId);const overdue=t.due&&daysBetween(t.due)<0;
+    return `<div class="task-row">
+      <button class="check ${t.status==="erledigt"?"done":""}" data-action="toggle-task" data-id="${t.id}">${t.status==="erledigt"?"✓":"○"}</button>
+      <div class="row-main"><strong class="${t.status==="erledigt"?"done-text":""}">${esc(t.title)}</strong>
+      <small>${esc(s?.emoji||"📌")} ${esc(s?.name||"Allgemein")} · ${t.minutes} Min. ${t.due?`· ${dateDE(t.due)}`:""}</small>
+      <div class="chips" style="margin-top:7px"><span class="badge ${overdue?"red":"blue"}">${overdue?"Überfällig":"Prio "+t.priority}</span><span class="badge">${t.progress||0}%</span></div></div>
+      <div class="row-actions">${t.status!=="erledigt"?`<button class="small-btn" data-action="start-task" data-id="${t.id}">▶</button>`:""}<button class="small-btn" data-action="edit-task" data-id="${t.id}">✎</button></div>
+    </div>`
+  }
+  function examRow(e){
+    const s=subject(e.subjectId);const days=daysBetween(e.date);const mastery=e.topics?.length?Math.round(e.topics.reduce((a,t)=>a+t.mastery,0)/e.topics.length):0;
+    return `<div class="exam-row">
+      <div style="font-size:25px">${esc(s?.emoji||"📝")}</div>
+      <div class="row-main"><strong>${esc(e.title)}</strong><small>${dateDE(e.date)} · ${days===0?"heute":days>0?`in ${days} Tagen`:"vorbei"}</small>
+      <div style="margin-top:8px">${progress(mastery)}</div></div><span class="badge ${days<=3?"red":days<=7?"yellow":"blue"}">${mastery}%</span>
+    </div>`
+  }
+
+  function planner(){
+    const month=calendarCursor;const year=month.getFullYear(),m=month.getMonth();const first=new Date(year,m,1);const offset=(first.getDay()+6)%7;const days=new Date(year,m+1,0).getDate();const prevDays=new Date(year,m,0).getDate();
+    const cells=[];for(let i=0;i<42;i++){let day=i-offset+1,cellDate,outside=false;if(day<1){cellDate=new Date(year,m-1,prevDays+day);outside=true}else if(day>days){cellDate=new Date(year,m+1,day-days);outside=true}else cellDate=new Date(year,m,day);
+      const key=todayKey(cellDate);const events=[...state.tasks.filter(t=>t.due===key),...state.exams.filter(e=>e.date===key),...state.sessions.filter(s=>s.date===key)];
+      cells.push(`<div class="day ${outside?"outside":""} ${key===todayKey()?"today":""}"><div class="day-number">${cellDate.getDate()}</div>${events.slice(0,3).map(ev=>`<div class="event-dot ${ev.topics?"exam":ev.minutes&&ev.taskId?"session":""}"></div>`).join("")}</div>`)
+    }
+    return `<div class="page">
+      ${header("Planer","Kalender, Jahresziele und ein realistischer Lernfahrplan.",`<button class="btn btn-primary" data-action="auto-plan">✦ Woche planen</button>`)}
+      <div class="tabs"><button class="tab active">Monat</button><button class="tab" data-action="scroll-year">Schuljahr</button><button class="tab" data-action="show-week-plan">Wochenplan</button></div>
+      <section class="card">
+        <div class="calendar-head"><button class="small-btn" data-action="calendar-prev">‹</button><h2>${month.toLocaleDateString("de-DE",{month:"long",year:"numeric"})}</h2><button class="small-btn" data-action="calendar-next">›</button></div>
+        <div class="calendar-grid">${["Mo","Di","Mi","Do","Fr","Sa","So"].map(d=>`<div class="weekday">${d}</div>`).join("")}${cells.join("")}</div>
+      </section>
+      <section class="card" id="yearPlanSection" style="margin-top:16px">
+        <div class="section-title"><h2>Schuljahres-Kommandoplan</h2><span class="badge blue">${state.yearPlan.filter(x=>x.done).length}/${state.yearPlan.length} Meilensteine</span></div>
+        <div class="timeline">${state.yearPlan.map(x=>`<div class="timeline-item"><strong>${esc(x.month)} · ${esc(x.title)}</strong><div class="muted" style="margin-top:5px">${x.done?"Abgeschlossen":"Noch offen"}</div><button class="btn btn-ghost" style="margin-top:8px;min-height:36px;padding:7px 11px" data-action="toggle-milestone" data-id="${x.id}">${x.done?"↩ Wieder öffnen":"✓ Abschließen"}</button></div>`).join("")}</div>
+      </section>
+    </div>`
+  }
+
+  function tasksPage(){
+    let list=state.tasks.filter(t=>taskFilter==="alle"||taskFilter==="offen"&&t.status!=="erledigt"||taskFilter==="erledigt"&&t.status==="erledigt"||taskFilter==="überfällig"&&t.status!=="erledigt"&&t.due&&daysBetween(t.due)<0);
+    list=[...list].sort((a,b)=>priorityScore(b)-priorityScore(a));
+    return `<div class="page">
+      ${header("Aufgaben","Mehr als eine To-do-Liste: Prioritäten, Teilaufgaben, Zeit und Fortschritt.",`<button class="btn btn-primary" data-action="add-task">＋ Neue Aufgabe</button>`)}
+      <div class="tabs">
+        ${["alle","offen","überfällig","erledigt"].map(x=>`<button class="tab ${taskFilter===x?"active":""}" data-action="task-filter" data-value="${x}">${x[0].toUpperCase()+x.slice(1)}</button>`).join("")}
+        <button class="tab ${taskView==="liste"?"active":""}" data-action="task-view" data-value="liste">☰ Liste</button>
+        <button class="tab ${taskView==="board"?"active":""}" data-action="task-view" data-value="board">▦ Board</button>
+      </div>
+      ${taskView==="liste"?`<div class="stack">${list.length?list.map(taskRow).join(""):empty("🗂️","Keine passenden Aufgaben","Ändere den Filter oder füge eine neue Aufgabe hinzu.")}</div>`:taskBoard(list)}
+    </div>`
+  }
+  function taskBoard(list){
+    const columns=[["offen","Offen"],["in-arbeit","In Arbeit"],["erledigt","Erledigt"]];
+    return `<div class="grid-3">${columns.map(([key,label])=>`<section class="card"><div class="section-title"><h3>${label}</h3><span class="badge">${list.filter(t=>t.status===key).length}</span></div><div class="stack">${list.filter(t=>t.status===key).map(t=>`<div class="task-row" data-action="edit-task" data-id="${t.id}"><div class="row-main"><strong>${esc(t.title)}</strong><small>${esc(subject(t.subjectId)?.name||"Allgemein")} · ${t.minutes} Min.</small></div></div>`).join("")||`<div class="muted">Leer</div>`}</div></section>`).join("")}</div>`
+  }
+
+  function examsPage(){
+    const sorted=[...state.exams].sort((a,b)=>a.date.localeCompare(b.date));
+    return `<div class="page">
+      ${header("Klausuren","Themenbeherrschung, Sicherheit, Zielnote und automatischer Lernplan.",`<button class="btn btn-primary" data-action="add-exam">＋ Klausur</button>`)}
+      <div class="grid-2">${sorted.map(e=>examCard(e)).join("")||empty("📝","Noch keine Klausuren","Lege die nächste Klausur mit ihren Themen an.")}</div>
+    </div>`
+  }
+  function examCard(e){
+    const s=subject(e.subjectId),days=daysBetween(e.date),mastery=e.topics?.length?Math.round(e.topics.reduce((a,t)=>a+t.mastery,0)/e.topics.length):0;
+    return `<section class="card">
+      <div class="section-title"><div><span class="badge blue">${esc(s?.emoji||"📝")} ${esc(s?.name||"Fach")}</span><h2 style="margin:10px 0 3px">${esc(e.title)}</h2><div class="muted">${dateDE(e.date)} · ${days>=0?`in ${days} Tagen`:"vorbei"}</div></div><span class="grade-big">${mastery}%</span></div>
+      ${progress(mastery)}
+      <div class="chips" style="margin:13px 0"><span class="badge">Zielnote ${e.target}</span><span class="badge ${e.confidence<=2?"red":e.confidence===3?"yellow":"green"}">Sicherheit ${e.confidence}/5</span></div>
+      <div class="stack">${(e.topics||[]).map(t=>`<div class="mastery-row"><span>${esc(t.title)}</span><input type="range" min="0" max="100" value="${t.mastery}" data-action="topic-mastery" data-exam="${e.id}" data-topic="${t.id}"><span>${t.mastery}%</span><button class="small-btn" data-action="delete-topic" data-exam="${e.id}" data-topic="${t.id}">×</button></div>`).join("")}</div>
+      <div class="chips" style="margin-top:15px"><button class="btn btn-secondary" data-action="add-topic" data-id="${e.id}">＋ Thema</button><button class="btn btn-primary" data-action="generate-exam-plan" data-id="${e.id}">✦ Lernplan</button><button class="btn btn-ghost" data-action="edit-exam" data-id="${e.id}">✎</button></div>
+    </section>`
+  }
+
+  function subjectsPage(){
+    return `<div class="page">
+      ${header("Fächer","Jedes Fach als eigenes Lern-Dashboard mit Ziel, Noten und Ressourcen.",`<button class="btn btn-primary" data-action="add-subject">＋ Fach</button>`)}
+      <div class="subject-grid">${state.subjects.filter(s=>!s.archived).map(subjectCard).join("")}</div>
+    </div>`
+  }
+  function subjectCard(s){
+    const avg=weightedAvg(s.id),tasks=openTasks().filter(t=>t.subjectId===s.id),nextExam=state.exams.filter(e=>e.subjectId===s.id&&daysBetween(e.date)>=0).sort((a,b)=>a.date.localeCompare(b.date))[0];
+    return `<section class="card subject-card" style="--subject:${s.color}">
+      <div class="subject-top"><span class="subject-emoji">${esc(s.emoji)}</span><span class="badge">Prio ${s.priority}/5</span></div>
+      <h3>${esc(s.name)}</h3><div class="muted">${s.teacher?esc(s.teacher):"Keine Lehrkraft eingetragen"}</div>
+      <div class="grid-2" style="gap:8px;margin-top:auto">
+        <div><span class="faint">Ø Note</span><div class="grade-big">${avg?avg.toFixed(2).replace(".",","):"–"}</div></div>
+        <div><span class="faint">Ziel</span><div class="grade-big">${s.target}</div></div>
+      </div>
+      <div class="chips"><span class="badge blue">${tasks.length} offen</span><span class="badge">${nextExam?`Klausur ${dateDE(nextExam.date)}`:"Keine Klausur"}</span></div>
+      <button class="btn btn-secondary" data-action="open-subject" data-id="${s.id}">Fach öffnen →</button>
+    </section>`
+  }
+
+  function gradesPage(){
+    const avgs=state.subjects.filter(s=>!s.archived).map(s=>({...s,avg:weightedAvg(s.id)}));
+    return `<div class="page">
+      ${header("Noten & Prognose","Gewichtete Noten, Zielrechner und Entwicklung pro Fach.",`<button class="btn btn-primary" data-action="add-grade">＋ Note</button>`)}
+      <div class="metrics">${metric("Gesamt-Ø",overallAvg()?.toFixed(2).replace(".",",")||"–","einfacher Fachmittelwert")}${metric("Gespeicherte Noten",state.grades.length)}${metric("Ziel-Ø",state.profile.targetAverage.toFixed(1))}${metric("Fächer im Ziel",avgs.filter(s=>s.avg&&s.avg<=s.target+.25).length)}</div>
+      <div class="grid-2">
+        <section class="card"><div class="section-title"><h2>Fachübersicht</h2></div><div class="stack">${avgs.map(s=>`<div class="task-row"><div style="font-size:24px">${s.emoji}</div><div class="row-main"><strong>${esc(s.name)}</strong><small>${state.grades.filter(g=>g.subjectId===s.id).length} Einträge · Ziel ${s.target}</small></div><span class="grade-big">${s.avg?s.avg.toFixed(2).replace(".",","):"–"}</span></div>`).join("")}</div></section>
+        <section class="card">
+          <div class="section-title"><h2>Notenverteilung</h2></div>
+          <div class="chart-bars">${[1,2,3,4,5,6].map(n=>{const count=state.grades.filter(g=>Math.round(g.grade)===n).length;const max=Math.max(1,...[1,2,3,4,5,6].map(x=>state.grades.filter(g=>Math.round(g.grade)===x).length));return `<div class="bar-wrap"><div class="bar" style="height:${Math.max(4,count/max*130)}px"></div><div class="bar-label">Note ${n}<br>${count}×</div></div>`}).join("")}</div>
+          <button class="btn btn-secondary" data-action="grade-scenario">🧮 Zielnoten-Rechner</button>
+        </section>
+      </div>
+      <section class="card" style="margin-top:16px"><div class="section-title"><h2>Letzte Noten</h2></div><div class="stack">${[...state.grades].reverse().slice(0,12).map(g=>`<div class="task-row"><div style="font-size:23px">${subject(g.subjectId)?.emoji||"📘"}</div><div class="row-main"><strong>${esc(g.title)}</strong><small>${esc(subject(g.subjectId)?.name||"Fach")} · Gewicht ${g.weight}</small></div><span class="grade-big">${g.grade}</span><button class="small-btn" data-action="delete-grade" data-id="${g.id}">×</button></div>`).join("")||empty("📊","Noch keine Noten","Trage echte Noten ein, damit Trends berechnet werden.")}</div></section>
+    </div>`
+  }
+
+  function focusPage(){
+    const recent=[...state.sessions].reverse().slice(0,8);const week=state.sessions.filter(s=>{const d=(new Date()-new Date(s.date+"T12:00:00"))/86400000;return d>=0&&d<7}).reduce((a,s)=>a+s.minutes,0);
+    return `<div class="page">
+      ${header("Fokusmodus","Pomodoro, freie Sessions, Lernserie und Konzentrationsprotokoll.",`<button class="btn btn-primary" data-action="open-focus">▶ Fokus starten</button>`)}
+      <div class="metrics">${metric("Heute",minutesToday()+" Min.")}${metric("Diese Woche",week+" Min.")}${metric("Sessions",state.sessions.length)}${metric("Serie",state.streak.current+" Tage")}</div>
+      <div class="grid-2">
+        <section class="card">
+          <div class="section-title"><h2>Schnellstart</h2></div>
+          <div class="grid-3">${[15,25,45].map(m=>`<button class="card" style="color:white;text-align:left" data-action="start-free-focus" data-minutes="${m}"><div style="font-size:28px">⏱️</div><h3>${m} Minuten</h3><div class="muted">${m===15?"Kurzer Sprint":m===25?"Klassischer Fokus":"Deep Work"}</div></button>`).join("")}</div>
+        </section>
+        <section class="card"><div class="section-title"><h2>Letzte Sessions</h2></div><div class="stack">${recent.map(s=>`<div class="session-row"><div style="font-size:22px">🔥</div><div class="row-main"><strong>${esc(s.title||"Freie Lernsession")}</strong><small>${dateDE(s.date)} · Fokus ${s.rating||3}/5</small></div><span class="badge green">${s.minutes} Min.</span></div>`).join("")||empty("⏳","Noch keine Session","Starte deinen ersten Fokusblock.")}</div></section>
+      </div>
+    </div>`
+  }
+
+  const QUICK_GUIDES=[
+    ["📐","Quadratische Funktionen","Mathematik"],["✍️","Textanalyse Aufbau","Deutsch"],["🌍","Englische Analyse","Englisch"],["🏛️","Quellenanalyse","Geschichte"],
+    ["🧬","Zellbiologie","Biologie"],["💻","Programmieren Grundlagen","Informatik"],["🧠","Argumentation","Philosophie"],["🗺️","Raumanalyse","Erdkunde"]
+  ];
+  function libraryPage(){
+    return `<div class="page">
+      ${header("Lernhilfe","Kostenlose Erklärungen, freie Lehrbücher, Lernkarten und eigene Notizen.",`<button class="btn btn-secondary" data-action="add-flashcard">＋ Lernkarte</button>`)}
+      <section class="card">
+        <div class="section-title"><div><h2>Thema erklären</h2><div class="muted">Suche in Wikipedia oder freien Wikibooks.</div></div><span class="badge green">Kostenlos · kein API-Key</span></div>
+        <div class="search-box"><input id="libraryQuery" placeholder="z. B. quadratische Funktionen, Weimarer Republik, Zellatmung"><button class="btn btn-primary" data-action="library-search">⌕ Suchen</button></div>
+        <div class="source-tabs"><button class="tab ${librarySource==="wikipedia"?"active":""}" data-action="library-source" data-value="wikipedia">Wikipedia</button><button class="tab ${librarySource==="wikibooks"?"active":""}" data-action="library-source" data-value="wikibooks">Wikibooks</button></div>
+        <div id="libraryResults">${libraryLoading?`<div class="empty">Lernquelle wird geladen …</div>`:libraryResults.length?libraryResults.map(r=>`<article class="result-card"><h3>${esc(r.title)}</h3><p>${esc(r.extract||"Keine Kurzbeschreibung verfügbar.")}</p><a href="${r.url}" target="_blank" rel="noopener">Originalquelle öffnen ↗</a></article>`).join(""):`<div class="quick-guides">${QUICK_GUIDES.map(g=>`<button class="guide" data-action="quick-guide" data-query="${esc(g[1])}"><div style="font-size:24px">${g[0]}</div><strong>${g[1]}</strong><div class="muted">${g[2]}</div></button>`).join("")}</div>`}</div>
+      </section>
+      <div class="grid-2" style="margin-top:16px">
+        <section class="card">
+          <div class="section-title"><h2>Lernkarten</h2><span class="badge">${state.flashcards.length}</span></div>
+          ${state.flashcards.length?flashcardView():empty("🃏","Keine Lernkarten","Erstelle Frage-und-Antwort-Karten.")}
+        </section>
+        <section class="card">
+          <div class="section-title"><h2>Eigene Notizen</h2><button class="btn btn-ghost" data-action="add-note">＋ Notiz</button></div>
+          <div class="stack">${state.notes.slice(-6).reverse().map(n=>`<div class="task-row"><div style="font-size:22px">📝</div><div class="row-main"><strong>${esc(n.title)}</strong><small>${esc(n.text).slice(0,100)}</small></div><button class="small-btn" data-action="delete-note" data-id="${n.id}">×</button></div>`).join("")||empty("📝","Noch keine Notizen","Speichere Zusammenfassungen und Merksätze.")}</div>
+        </section>
+      </div>
+    </div>`
+  }
+  function flashcardView(){
+    flashIndex=clamp(flashIndex,0,state.flashcards.length-1);const f=state.flashcards[flashIndex],s=subject(f.subjectId);
+    return `<div class="flashcard" id="flashcard" data-action="flip-card"><div class="flashcard-inner"><div class="flash-front"><span class="badge blue">${esc(s?.emoji||"📘")} ${esc(s?.name||"Allgemein")}</span><h2>${esc(f.front)}</h2><div class="muted">Tippen zum Umdrehen</div></div><div class="flash-back"><span class="eyebrow">Antwort</span><h2>${esc(f.back)}</h2></div></div></div>
+      <div style="display:flex;justify-content:center;gap:10px"><button class="small-btn" data-action="flash-prev">‹</button><span class="badge">${flashIndex+1}/${state.flashcards.length}</span><button class="small-btn" data-action="flash-next">›</button></div>`
+  }
+
+  function insightsPage(){
+    const last7=Array.from({length:7},(_,i)=>{const d=new Date(Date.now()-(6-i)*86400000),key=todayKey(d);return {label:d.toLocaleDateString("de-DE",{weekday:"short"}),minutes:state.sessions.filter(s=>s.date===key).reduce((a,s)=>a+s.minutes,0)}});const max=Math.max(1,...last7.map(x=>x.minutes));
+    const subjectMinutes=state.subjects.map(s=>({s,minutes:state.sessions.filter(x=>x.subjectId===s.id).reduce((a,x)=>a+x.minutes,0)})).sort((a,b)=>b.minutes-a.minutes);
+    return `<div class="page">
+      ${header("Fortschritt","Erkenne Muster: Lernzeit, Aufgaben, Fachverteilung und Arbeitsgewohnheiten.")}
+      <div class="metrics">${metric("Gesamtlernzeit",state.sessions.reduce((a,s)=>a+s.minutes,0)+" Min.")}${metric("Erledigte Aufgaben",state.tasks.filter(t=>t.status==="erledigt").length)}${metric("Beste Serie",state.streak.best+" Tage")}${metric("Ø Fokus",state.sessions.length?(state.sessions.reduce((a,s)=>a+(s.rating||3),0)/state.sessions.length).toFixed(1)+"/5":"–")}</div>
+      <div class="grid-2">
+        <section class="card"><div class="section-title"><h2>Letzte 7 Tage</h2></div><div class="chart-bars">${last7.map(x=>`<div class="bar-wrap"><div class="bar" style="height:${Math.max(4,x.minutes/max*130)}px"></div><div class="bar-label">${x.label}<br>${x.minutes}m</div></div>`).join("")}</div></section>
+        <section class="card"><div class="section-title"><h2>Lernzeit nach Fach</h2></div><div class="stack">${subjectMinutes.slice(0,8).map(x=>`<div><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>${x.s.emoji} ${esc(x.s.name)}</span><span class="muted">${x.minutes} Min.</span></div>${progress(x.minutes/Math.max(1,subjectMinutes[0]?.minutes)*100)}</div>`).join("")}</div></section>
+      </div>
+      <section class="card" style="margin-top:16px"><div class="section-title"><h2>Automatische Erkenntnisse</h2></div><div class="grid-3">${insightCards()}</div></section>
+    </div>`
+  }
+  function insightCards(){
+    const sessions=state.sessions.length;const open=openTasks().length;const overdue=openTasks().filter(t=>t.due&&daysBetween(t.due)<0).length;
+    const data=[
+      ["⚡","Arbeitslast",overdue?`${overdue} Aufgabe(n) sind überfällig.`:`${open} offene Aufgaben sind aktuell kontrollierbar.`],
+      ["🎯","Fokus",sessions?`Du hast ${sessions} Lernsession(s) protokolliert.`:"Starte Sessions, damit echte Muster entstehen."],
+      ["📊","Noten",overallAvg()?`Dein momentaner Fachmittelwert liegt bei ${overallAvg().toFixed(2).replace(".",",")}.`:"Trage Noten ein, um Prognosen zu erhalten."]
+    ];return data.map(x=>`<div class="metric-card"><div style="font-size:26px">${x[0]}</div><strong style="font-size:18px">${x[1]}</strong><div class="muted">${x[2]}</div></div>`).join("")
+  }
+
+  function settingsPage(){
+    return `<div class="page">
+      ${header("Einstellungen","Profil, Darstellung, Datenschutz, Sicherung und App-Verhalten.")}
+      <div class="grid-2">
+        <section class="card">
+          <div class="section-title"><h2>Profil</h2></div>
+          <div class="form-grid">
+            <label class="field"><span>Name</span><input id="settingName" value="${esc(state.profile.name)}"></label>
+            <label class="field"><span>Jahrgang</span><input id="settingGrade" value="${esc(state.profile.grade)}"></label>
+            <label class="field"><span>Zielnotenschnitt</span><input id="settingTarget" type="number" min="1" max="6" step=".1" value="${state.profile.targetAverage}"></label>
+            <label class="field"><span>Tagesziel Minuten</span><input id="settingGoal" type="number" min="10" max="300" value="${state.settings.dailyGoal}"></label>
+          </div>
+          <button class="btn btn-primary" style="margin-top:14px" data-action="save-settings">Speichern</button>
+        </section>
+        <section class="card">
+          <div class="section-title"><h2>Darstellung</h2></div>
+          <div class="switch-row"><div><strong>Animationen</strong><div class="muted">Übergänge und Effekte</div></div><button class="switch ${state.settings.animations?"on":""}" data-action="toggle-setting" data-key="animations"></button></div>
+          <div class="switch-row"><div><strong>Kompakte Ansicht</strong><div class="muted">Mehr Inhalt auf einmal</div></div><button class="switch ${state.settings.compact?"on":""}" data-action="toggle-setting" data-key="compact"></button></div>
+          <div class="switch-row"><div><strong>Installierte PWA</strong><div class="muted">${window.matchMedia("(display-mode: standalone)").matches?"Als App geöffnet":"Im Browser geöffnet"}</div></div><span class="badge green">Bereit</span></div>
+        </section>
+        <section class="card">
+          <div class="section-title"><h2>Daten & Backups</h2></div>
+          <p class="muted">Automatische lokale Speicherung. Exportiere regelmäßig eine Sicherung in iCloud Drive.</p>
+          <div class="chips"><button class="btn btn-secondary" data-action="export-data">↓ Export</button><button class="btn btn-secondary" data-action="import-data">↑ Import</button><input id="importFile" type="file" accept=".json,application/json" hidden><button class="btn btn-danger" data-action="reset-data">Alles zurücksetzen</button></div>
+        </section>
+        <section class="card">
+          <div class="section-title"><h2>Über EF COMMAND</h2></div>
+          <div class="stack"><div class="task-row"><div class="row-main"><strong>Version</strong><small>${VERSION} · flache PWA ohne Ordner</small></div></div><div class="task-row"><div class="row-main"><strong>Speicherort</strong><small>Dieses Gerät / diese Web-App</small></div></div><div class="task-row"><div class="row-main"><strong>Lernhilfe</strong><small>Wikimedia-Quellen, kein privater API-Schlüssel</small></div></div></div>
+        </section>
+      </div>
+    </div>`
+  }
+
+  function render(){
+    renderNav();
+    document.body.classList.toggle("reduce-motion",!state.settings.animations);
+    const content=page==="dashboard"?dashboard():page==="planner"?planner():page==="tasks"?tasksPage():page==="exams"?examsPage():page==="subjects"?subjectsPage():page==="grades"?gradesPage():page==="focus"?focusPage():page==="library"?libraryPage():page==="insights"?insightsPage():settingsPage();
+    document.getElementById("appMain").innerHTML=content;
+    if(!state.profile.onboardingCompleted)showOnboarding();
+  }
+
+  function toast(message,type=""){
+    const wrap=document.getElementById("toastWrap"),el=document.createElement("div");el.className=`toast ${type}`;el.textContent=message;wrap.appendChild(el);setTimeout(()=>el.remove(),3400)
+  }
+  function showModal(title,body){
+    document.getElementById("modalTitle").textContent=title;document.getElementById("modalBody").innerHTML=body;document.getElementById("modal").classList.add("show")
+  }
+  function closeModal(){document.getElementById("modal").classList.remove("show")}
+  function taskForm(t={}){
+    return `<div class="form-grid">
+      <label class="field full"><span>Titel</span><input id="fTaskTitle" value="${esc(t.title||"")}" placeholder="Was musst du erledigen?"></label>
+      <label class="field"><span>Fach</span><select id="fTaskSubject"><option value="">Allgemein</option>${state.subjects.filter(s=>!s.archived).map(s=>`<option value="${s.id}" ${t.subjectId===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}</select></label>
+      <label class="field"><span>Fällig</span><input id="fTaskDue" type="date" value="${t.due||todayKey()}"></label>
+      <label class="field"><span>Zeit in Minuten</span><input id="fTaskMinutes" type="number" min="5" value="${t.minutes||25}"></label>
+      <label class="field"><span>Priorität 1–5</span><input id="fTaskPriority" type="number" min="1" max="5" value="${t.priority||3}"></label>
+      <label class="field"><span>Status</span><select id="fTaskStatus">${[["offen","Offen"],["in-arbeit","In Arbeit"],["erledigt","Erledigt"]].map(x=>`<option value="${x[0]}" ${t.status===x[0]?"selected":""}>${x[1]}</option>`).join("")}</select></label>
+      <label class="field"><span>Fortschritt %</span><input id="fTaskProgress" type="number" min="0" max="100" value="${t.progress||0}"></label>
+      <label class="field full"><span>Notizen</span><textarea id="fTaskNotes">${esc(t.notes||"")}</textarea></label>
+      <label class="field full"><span>Teilaufgaben, eine pro Zeile</span><textarea id="fTaskSubtasks">${esc((t.subtasks||[]).join("\n"))}</textarea></label>
+    </div><div class="chips" style="margin-top:16px">${t.id?`<button class="btn btn-danger" data-action="delete-task" data-id="${t.id}">Löschen</button>`:""}<button class="btn btn-primary" data-action="save-task" data-id="${t.id||""}">Speichern</button></div>`
+  }
+  function examForm(e={}){
+    return `<div class="form-grid">
+      <label class="field full"><span>Titel</span><input id="fExamTitle" value="${esc(e.title||"")}"></label>
+      <label class="field"><span>Fach</span><select id="fExamSubject">${state.subjects.filter(s=>!s.archived).map(s=>`<option value="${s.id}" ${e.subjectId===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}</select></label>
+      <label class="field"><span>Datum</span><input id="fExamDate" type="date" value="${e.date||todayKey(new Date(Date.now()+7*86400000))}"></label>
+      <label class="field"><span>Zielnote</span><input id="fExamTarget" type="number" min="1" max="6" value="${e.target||3}"></label>
+      <label class="field"><span>Sicherheit 1–5</span><input id="fExamConfidence" type="number" min="1" max="5" value="${e.confidence||3}"></label>
+    </div><div class="chips" style="margin-top:16px">${e.id?`<button class="btn btn-danger" data-action="delete-exam" data-id="${e.id}">Löschen</button>`:""}<button class="btn btn-primary" data-action="save-exam" data-id="${e.id||""}">Speichern</button></div>`
+  }
+  function subjectForm(s={}){
+    return `<div class="form-grid">
+      <label class="field"><span>Name</span><input id="fSubjectName" value="${esc(s.name||"")}"></label>
+      <label class="field"><span>Emoji</span><input id="fSubjectEmoji" value="${esc(s.emoji||"📘")}"></label>
+      <label class="field"><span>Lehrkraft</span><input id="fSubjectTeacher" value="${esc(s.teacher||"")}"></label>
+      <label class="field"><span>Zielnote</span><input id="fSubjectTarget" type="number" min="1" max="6" value="${s.target||3}"></label>
+      <label class="field"><span>Priorität 1–5</span><input id="fSubjectPriority" type="number" min="1" max="5" value="${s.priority||3}"></label>
+      <label class="field"><span>Farbe</span><input id="fSubjectColor" type="color" value="${s.color||"#5b8cff"}"></label>
+    </div><div class="chips" style="margin-top:16px"><button class="btn btn-primary" data-action="save-subject" data-id="${s.id||""}">Speichern</button></div>`
+  }
+
+  function showOnboarding(){
+    document.getElementById("onboarding").classList.add("show");const body=document.getElementById("onboardingBody");
+    document.querySelectorAll(".onboarding-steps span").forEach((x,i)=>x.classList.toggle("active",i<=onboardingStep));
+    if(onboardingStep===0)body.innerHTML=`<span class="eyebrow">EF COMMAND Ultimate</span><h1 style="font-size:40px">Dein Schuljahr bekommt ein Betriebssystem. 🚀</h1><p class="muted">Aufgaben, Klausuren, Noten, Fokus, Lernhilfe, Jahresplan und Fortschritt an einem Ort.</p><button class="btn btn-primary" data-action="onboarding-next">Los geht's</button>`;
+    if(onboardingStep===1)body.innerHTML=`<h2>Dein Profil</h2><div class="form-grid"><label class="field"><span>Name</span><input id="onName" value="${esc(state.profile.name)}"></label><label class="field"><span>Zielnotenschnitt</span><input id="onTarget" type="number" step=".1" min="1" max="6" value="${state.profile.targetAverage}"></label></div><div class="chips" style="margin-top:16px"><button class="btn btn-secondary" data-action="onboarding-back">Zurück</button><button class="btn btn-primary" data-action="onboarding-next">Weiter</button></div>`;
+    if(onboardingStep===2)body.innerHTML=`<h2>Vorbereitung auswählen</h2><p class="muted">Die NRW-EF-Vorbereitung ist bereits mit typischen Fächern und Jahreszielen gefüllt.</p><div class="preset-grid"><div class="preset selected"><div style="font-size:28px">🎓</div><strong>NRW EF komplett</strong><div class="muted">Empfohlen</div></div><div class="preset"><div style="font-size:28px">🧹</div><strong>Leer starten</strong><div class="muted">Alles selbst eintragen</div></div><div class="preset"><div style="font-size:28px">⚡</div><strong>Minimal</strong><div class="muted">Nur Kernfächer</div></div></div><div class="chips" style="margin-top:18px"><button class="btn btn-secondary" data-action="onboarding-back">Zurück</button><button class="btn btn-primary" data-action="onboarding-finish">App starten</button></div>`;
+  }
+
+  async function librarySearch(query){
+    query=(query||document.getElementById("libraryQuery")?.value||"").trim();if(!query)return toast("Gib zuerst ein Thema ein.","error");
+    libraryLoading=true;libraryResults=[];render();
+    try{
+      const base=librarySource==="wikibooks"?"https://de.wikibooks.org/w/api.php":"https://de.wikipedia.org/w/api.php";
+      const url=`${base}?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrlimit=5&prop=extracts|info&exintro=1&explaintext=1&inprop=url&format=json&origin=*`;
+      const res=await fetch(url);if(!res.ok)throw new Error("Netzwerkfehler");const data=await res.json();
+      libraryResults=Object.values(data.query?.pages||{}).sort((a,b)=>(a.index||0)-(b.index||0)).map(p=>({title:p.title,extract:p.extract,url:p.fullurl}));
+      if(!libraryResults.length)toast("Keine passende Quelle gefunden.","error")
+    }catch(e){libraryResults=[{title:"Offline-Hinweis",extract:"Die Online-Lernhilfe konnte gerade nicht geladen werden. Deine übrige App funktioniert weiterhin offline.",url:"#"}];}
+    libraryLoading=false;render();
+  }
+
+  function startFocus(taskId,minutes,title,subjectId){
+    const task=taskId?state.tasks.find(t=>t.id===taskId):null;focus.taskId=taskId||null;focus.total=(minutes||task?.minutes||state.settings.defaultFocus)*60;focus.left=focus.total;focus.running=true;focus.startedAt=Date.now();
+    document.getElementById("timerTaskTitle").textContent=title||task?.title||"Freie Lernsession";document.getElementById("timerSubject").textContent=subject(subjectId||task?.subjectId)?.name||"Fokusmodus";document.getElementById("timerOverlay").classList.add("show");updateTimer();
+    clearInterval(focus.interval);focus.interval=setInterval(()=>{if(!focus.running)return;focus.left=Math.max(0,focus.left-1);updateTimer();if(focus.left===0){focus.running=false;clearInterval(focus.interval);toast("Fokusblock geschafft!","success")}},1000)
+  }
+  function updateTimer(){
+    const m=String(Math.floor(focus.left/60)).padStart(2,"0"),s=String(focus.left%60).padStart(2,"0");document.getElementById("timerValue").textContent=`${m}:${s}`;
+    document.getElementById("timerStatus").textContent=focus.running?"Fokus läuft":"Pausiert";document.getElementById("timerPause").textContent=focus.running?"⏸ Pause":"▶ Weiter";
+    const pct=focus.total?((focus.total-focus.left)/focus.total*100):0;document.getElementById("timerRing").style.setProperty("--timer-progress",pct+"%")
+  }
+  function finishFocus(){
+    const used=Math.max(1,Math.round((focus.total-focus.left)/60));const title=document.getElementById("timerTaskTitle").textContent;const sid=focus.taskId?state.tasks.find(t=>t.id===focus.taskId)?.subjectId:null;
+    clearInterval(focus.interval);document.getElementById("timerOverlay").classList.remove("show");
+    mutate(s=>{s.sessions.push({id:uid(),date:todayKey(),minutes:used,title,taskId:focus.taskId,subjectId:sid,rating:4});if(focus.taskId){const t=s.tasks.find(x=>x.id===focus.taskId);if(t){t.progress=clamp((t.progress||0)+Math.round(used/(t.minutes||used)*100),0,100);t.status=t.progress>=100?"erledigt":"in-arbeit";if(t.status==="erledigt")t.completedAt=new Date().toISOString()}}updateStreak();return s},`${used} Lernminuten gespeichert`)
+  }
+
+  document.addEventListener("click",e=>{
+    const target=e.target.closest("[data-action],[data-page]");if(!target)return;
+    const action=target.dataset.action,id=target.dataset.id;
+    if(target.dataset.page){
+      if(target.dataset.page==="more"){document.getElementById("moreSheet").classList.add("show");return}
+      page=target.dataset.page;document.getElementById("moreSheet").classList.remove("show");render();window.scrollTo(0,0);return
+    }
+    if(action==="close-more")document.getElementById("moreSheet").classList.remove("show");
+    if(action==="close-modal")closeModal();
+    if(action==="quick-add")showModal("Schnell hinzufügen",`<div class="grid-3"><button class="card" data-action="add-task"><div style="font-size:30px">✓</div><h3>Aufgabe</h3><div class="muted">Frist, Fach, Zeit</div></button><button class="card" data-action="add-exam"><div style="font-size:30px">📝</div><h3>Klausur</h3><div class="muted">Termin und Themen</div></button><button class="card" data-action="add-note"><div style="font-size:30px">📒</div><h3>Notiz</h3><div class="muted">Zusammenfassung</div></button></div>`);
+    if(action==="add-task"){showModal("Neue Aufgabe",taskForm())}
+    if(action==="edit-task"){const t=state.tasks.find(x=>x.id===id);if(t)showModal("Aufgabe bearbeiten",taskForm(t))}
+    if(action==="save-task"){
+      const item={title:document.getElementById("fTaskTitle").value.trim(),subjectId:document.getElementById("fTaskSubject").value||null,due:document.getElementById("fTaskDue").value,minutes:Number(document.getElementById("fTaskMinutes").value)||25,priority:Number(document.getElementById("fTaskPriority").value)||3,status:document.getElementById("fTaskStatus").value,progress:Number(document.getElementById("fTaskProgress").value)||0,notes:document.getElementById("fTaskNotes").value,subtasks:document.getElementById("fTaskSubtasks").value.split("\n").map(x=>x.trim()).filter(Boolean)};
+      if(!item.title)return toast("Titel fehlt.","error");mutate(s=>{if(id){Object.assign(s.tasks.find(x=>x.id===id),item)}else{s.tasks.push({id:uid(),...item,createdAt:new Date().toISOString()})}return s},"Aufgabe gespeichert");closeModal()
+    }
+    if(action==="delete-task"){if(confirm("Aufgabe löschen?")){mutate(s=>{s.tasks=s.tasks.filter(x=>x.id!==id);return s},"Aufgabe gelöscht");closeModal()}}
+    if(action==="toggle-task"){mutate(s=>{const t=s.tasks.find(x=>x.id===id);if(t){t.status=t.status==="erledigt"?"offen":"erledigt";t.progress=t.status==="erledigt"?100:0;t.completedAt=t.status==="erledigt"?new Date().toISOString():null}return s})}
+    if(action==="task-filter"){taskFilter=target.dataset.value;render()}
+    if(action==="task-view"){taskView=target.dataset.value;render()}
+    if(action==="start-task"){const t=state.tasks.find(x=>x.id===id);if(t)startFocus(t.id,t.minutes,t.title,t.subjectId)}
+    if(action==="add-exam")showModal("Neue Klausur",examForm());
+    if(action==="edit-exam"){const ex=state.exams.find(x=>x.id===id);if(ex)showModal("Klausur bearbeiten",examForm(ex))}
+    if(action==="save-exam"){
+      const item={title:document.getElementById("fExamTitle").value.trim(),subjectId:document.getElementById("fExamSubject").value,date:document.getElementById("fExamDate").value,target:Number(document.getElementById("fExamTarget").value)||3,confidence:Number(document.getElementById("fExamConfidence").value)||3};
+      if(!item.title)return toast("Titel fehlt.","error");mutate(s=>{if(id)Object.assign(s.exams.find(x=>x.id===id),item);else s.exams.push({id:uid(),...item,topics:[]});return s},"Klausur gespeichert");closeModal()
+    }
+    if(action==="delete-exam"){if(confirm("Klausur löschen?")){mutate(s=>{s.exams=s.exams.filter(x=>x.id!==id);return s},"Klausur gelöscht");closeModal()}}
+    if(action==="add-topic")showModal("Klausurthema hinzufügen",`<label class="field"><span>Thema</span><input id="newTopicTitle"></label><button class="btn btn-primary" style="margin-top:14px" data-action="save-topic" data-id="${id}">Hinzufügen</button>`);
+    if(action==="save-topic"){const title=document.getElementById("newTopicTitle").value.trim();if(title){mutate(s=>{s.exams.find(x=>x.id===id).topics.push({id:uid(),title,mastery:0});return s},"Thema hinzugefügt");closeModal()}}
+    if(action==="delete-topic")mutate(s=>{const ex=s.exams.find(x=>x.id===target.dataset.exam);ex.topics=ex.topics.filter(x=>x.id!==target.dataset.topic);return s});
+    if(action==="generate-exam-plan"){
+      const ex=state.exams.find(x=>x.id===id),days=Math.max(1,daysBetween(ex.date));const tasks=(ex.topics||[]).map((t,i)=>({id:uid(),title:`Klausur: ${t.title}`,subjectId:ex.subjectId,due:todayKey(new Date(Date.now()+Math.max(1,Math.floor(days*(i+1)/(ex.topics.length+1)))*86400000)),minutes:t.mastery<40?45:25,priority:5,status:"offen",progress:0,notes:`Vorbereitung für ${ex.title}`,subtasks:[],createdAt:new Date().toISOString()}));
+      mutate(s=>{s.tasks.push(...tasks);return s},`${tasks.length} Lernaufgaben erstellt`)
+    }
+    if(action==="add-subject")showModal("Neues Fach",subjectForm());
+    if(action==="save-subject"){
+      const item={name:document.getElementById("fSubjectName").value.trim(),emoji:document.getElementById("fSubjectEmoji").value||"📘",teacher:document.getElementById("fSubjectTeacher").value,target:Number(document.getElementById("fSubjectTarget").value)||3,priority:Number(document.getElementById("fSubjectPriority").value)||3,color:document.getElementById("fSubjectColor").value};
+      if(!item.name)return toast("Fachname fehlt.","error");mutate(s=>{if(id)Object.assign(s.subjects.find(x=>x.id===id),item);else s.subjects.push({id:uid(),archived:false,...item});return s},"Fach gespeichert");closeModal()
+    }
+    if(action==="open-subject"){const s=state.subjects.find(x=>x.id===id);showModal(s.name,subjectForm(s))}
+    if(action==="add-grade")showModal("Neue Note",`<div class="form-grid"><label class="field"><span>Fach</span><select id="gSubject">${state.subjects.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select></label><label class="field"><span>Titel</span><input id="gTitle" placeholder="Klausur 1"></label><label class="field"><span>Note</span><input id="gValue" type="number" min="1" max="6" step=".25" value="3"></label><label class="field"><span>Gewicht</span><input id="gWeight" type="number" min=".1" step=".1" value="1"></label></div><button class="btn btn-primary" style="margin-top:14px" data-action="save-grade">Speichern</button>`);
+    if(action==="save-grade"){const g={id:uid(),subjectId:document.getElementById("gSubject").value,title:document.getElementById("gTitle").value||"Leistung",grade:Number(document.getElementById("gValue").value),weight:Number(document.getElementById("gWeight").value)||1,date:todayKey()};mutate(s=>{s.grades.push(g);return s},"Note gespeichert");closeModal()}
+    if(action==="delete-grade")mutate(s=>{s.grades=s.grades.filter(x=>x.id!==id);return s},"Note gelöscht");
+    if(action==="grade-scenario")showModal("Zielnoten-Rechner",`<p class="muted">Wähle ein Fach und eine mögliche nächste Note.</p><div class="form-grid"><label class="field"><span>Fach</span><select id="scSubject">${state.subjects.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select></label><label class="field"><span>Mögliche Note</span><input id="scGrade" type="number" min="1" max="6" step=".25" value="2"></label><label class="field"><span>Gewicht</span><input id="scWeight" type="number" min=".1" step=".1" value="1"></label></div><button class="btn btn-primary" style="margin-top:14px" data-action="calculate-scenario">Berechnen</button><div id="scenarioResult"></div>`);
+    if(action==="calculate-scenario"){const sid=document.getElementById("scSubject").value,g=Number(document.getElementById("scGrade").value),w=Number(document.getElementById("scWeight").value)||1,gs=state.grades.filter(x=>x.subjectId===sid),sum=gs.reduce((a,x)=>a+x.grade*(x.weight||1),0)+g*w,total=gs.reduce((a,x)=>a+(x.weight||1),0)+w;document.getElementById("scenarioResult").innerHTML=`<div class="metric-card" style="margin-top:15px"><span>Neuer möglicher Schnitt</span><strong>${(sum/total).toFixed(2).replace(".",",")}</strong></div>`}
+    if(action==="open-focus")showModal("Fokus starten",`<div class="form-grid"><label class="field full"><span>Aufgabe</span><select id="focusTask"><option value="">Freie Lernsession</option>${openTasks().map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("")}</select></label><label class="field"><span>Minuten</span><input id="focusMinutes" type="number" min="5" value="${state.settings.defaultFocus}"></label><label class="field"><span>Titel</span><input id="focusTitle" value="Konzentriert lernen"></label></div><button class="btn btn-primary" style="margin-top:14px" data-action="start-focus-form">Starten</button>`);
+    if(action==="start-focus-form"){const tid=document.getElementById("focusTask").value,mins=Number(document.getElementById("focusMinutes").value)||25,t=state.tasks.find(x=>x.id===tid);closeModal();startFocus(tid||null,mins,t?.title||document.getElementById("focusTitle")?.value||"Freie Lernsession",t?.subjectId)}
+    if(action==="start-free-focus")startFocus(null,Number(target.dataset.minutes),"Freie Lernsession",null);
+    if(action==="timer-pause"){focus.running=!focus.running;updateTimer()}
+    if(action==="timer-finish")finishFocus();
+    if(action==="close-timer"){clearInterval(focus.interval);document.getElementById("timerOverlay").classList.remove("show")}
+    if(action==="open-search"){page="library";render();setTimeout(()=>document.getElementById("libraryQuery")?.focus(),100)}
+    if(action==="library-source"){librarySource=target.dataset.value;libraryResults=[];render()}
+    if(action==="library-search")librarySearch();
+    if(action==="quick-guide"){librarySearch(target.dataset.query)}
+    if(action==="flip-card")document.getElementById("flashcard")?.classList.toggle("flipped");
+    if(action==="flash-prev"){flashIndex=(flashIndex-1+state.flashcards.length)%state.flashcards.length;render()}
+    if(action==="flash-next"){flashIndex=(flashIndex+1)%state.flashcards.length;render()}
+    if(action==="add-flashcard")showModal("Neue Lernkarte",`<div class="form-grid"><label class="field"><span>Fach</span><select id="fcSubject">${state.subjects.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select></label><label class="field full"><span>Frage</span><textarea id="fcFront"></textarea></label><label class="field full"><span>Antwort</span><textarea id="fcBack"></textarea></label></div><button class="btn btn-primary" style="margin-top:14px" data-action="save-flashcard">Speichern</button>`);
+    if(action==="save-flashcard"){const f={id:uid(),subjectId:document.getElementById("fcSubject").value,front:document.getElementById("fcFront").value,back:document.getElementById("fcBack").value};mutate(s=>{s.flashcards.push(f);return s},"Lernkarte gespeichert");closeModal()}
+    if(action==="add-note")showModal("Neue Notiz",`<label class="field"><span>Titel</span><input id="noteTitle"></label><label class="field" style="margin-top:12px"><span>Notiz</span><textarea id="noteText"></textarea></label><button class="btn btn-primary" style="margin-top:14px" data-action="save-note">Speichern</button>`);
+    if(action==="save-note"){const n={id:uid(),title:document.getElementById("noteTitle").value||"Notiz",text:document.getElementById("noteText").value,date:todayKey()};mutate(s=>{s.notes.push(n);return s},"Notiz gespeichert");closeModal()}
+    if(action==="delete-note")mutate(s=>{s.notes=s.notes.filter(x=>x.id!==id);return s},"Notiz gelöscht");
+    if(action==="calendar-prev"){calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()-1,1);render()}
+    if(action==="calendar-next"){calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()+1,1);render()}
+    if(action==="scroll-year")document.getElementById("yearPlanSection")?.scrollIntoView({behavior:"smooth"});
+    if(action==="toggle-milestone")mutate(s=>{const x=s.yearPlan.find(y=>y.id===id);x.done=!x.done;return s});
+    if(action==="auto-plan"){
+      const planned=openTasks().slice(0,5);if(!planned.length)return toast("Keine offenen Aufgaben.","error");
+      toast(`Wochenplan mit ${planned.length} Prioritäten erstellt.`,"success")
+    }
+    if(action==="show-week-plan")toast("Die Wochenansicht wird aus deinen offenen Aufgaben gebildet.","success");
+    if(action==="save-settings"){mutate(s=>{s.profile.name=document.getElementById("settingName").value;s.profile.grade=document.getElementById("settingGrade").value;s.profile.targetAverage=Number(document.getElementById("settingTarget").value)||2.5;s.settings.dailyGoal=Number(document.getElementById("settingGoal").value)||75;return s},"Einstellungen gespeichert")}
+    if(action==="toggle-setting"){mutate(s=>{s.settings[target.dataset.key]=!s.settings[target.dataset.key];return s})}
+    if(action==="export-data"){const blob=new Blob([JSON.stringify({version:VERSION,exportedAt:new Date().toISOString(),data:state},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`ef-command-backup-${todayKey()}.json`;a.click();URL.revokeObjectURL(url);toast("Backup exportiert.","success")}
+    if(action==="import-data")document.getElementById("importFile").click();
+    if(action==="reset-data"){if(confirm("Wirklich alle Daten löschen?")){state=freshState();state.profile.onboardingCompleted=true;save();render();toast("Daten zurückgesetzt.","success")}}
+    if(action==="onboarding-next"){if(onboardingStep===1){state.profile.name=document.getElementById("onName").value||"Schüler";state.profile.targetAverage=Number(document.getElementById("onTarget").value)||2.5}onboardingStep++;showOnboarding()}
+    if(action==="onboarding-back"){onboardingStep=Math.max(0,onboardingStep-1);showOnboarding()}
+    if(action==="onboarding-finish"){state.profile.onboardingCompleted=true;save();document.getElementById("onboarding").classList.remove("show");render();toast("EF COMMAND ist bereit. 🚀","success")}
+  });
+
+  document.addEventListener("input",e=>{
+    if(e.target.dataset.action==="topic-mastery"){const ex=state.exams.find(x=>x.id===e.target.dataset.exam),t=ex?.topics.find(x=>x.id===e.target.dataset.topic);if(t){t.mastery=Number(e.target.value);save();e.target.nextElementSibling.textContent=t.mastery+"%"}}
+  });
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeModal();document.getElementById("moreSheet").classList.remove("show")}if(e.key==="Enter"&&e.target.id==="libraryQuery")librarySearch()});
+  document.addEventListener("change",e=>{
+    if(e.target.id==="importFile"){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const parsed=JSON.parse(reader.result);state=parsed.data||parsed;save();render();toast("Backup importiert.","success")}catch{toast("Datei ungültig.","error")}};reader.readAsText(file)}
+  });
+
+  if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+  render();
+})();
+</script>
+</body>
+</html>

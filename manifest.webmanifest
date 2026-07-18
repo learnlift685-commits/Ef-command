@@ -1,11 +1,13 @@
 {
-  "name": "EF COMMAND",
+  "name": "EF COMMAND Ultimate",
   "short_name": "EF COMMAND",
-  "start_url": "./index.html",
+  "description": "Dein vollständiges Lern-Kommandozentrum für die EF.",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#020617",
-  "theme_color": "#020617",
+  "background_color": "#050a14",
+  "theme_color": "#07101f",
+  "orientation": "any",
   "icons": [
     {
       "src": "icon-192.png",
